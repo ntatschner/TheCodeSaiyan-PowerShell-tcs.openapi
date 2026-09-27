@@ -18,7 +18,7 @@ Publishing uses the shared workflows in
    `RequiredModules = @(@{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.0' })`. The Gallery refuses a module whose
    required modules it does not have, and every CI job that imports tcs.openapi installs tcs.core first (the Pester
    jobs install exactly 0.4.0; the shared validate workflow's "Resolve RequiredModules" step installs the latest).
-   Publish tcs.core 0.4.0 before the first tcs.openapi release.
+   tcs.core 0.4.0 is already published.
 
 ## Releasing a version
 
@@ -36,10 +36,6 @@ creates the `v0.2.0` tag and the tag starts `publish-to-psgallery.yml`. To publi
 - The manifest lists `RequiredAssemblies = @('System.Net.Http')`. `Test-ModuleManifest` checks that entry against
   the Windows GAC, so it reports it as invalid on Linux and macOS although the module imports everywhere; the shared
   workflows run on Windows, and `Build.ps1` and `tests/Module.Tests.ps1` ignore that one error elsewhere.
-- The shared publish workflow runs `Test-ModuleManifest` before its "Resolve RequiredModules" step, and
-  `Test-ModuleManifest` reports a RequiredModule that is not installed as an error. If publishing stops at "Test
-  Module Manifest" with an invalid `tcs.core` entry, the fix belongs in tcs-shared-workflows (resolve the
-  RequiredModules first); the same applies to every tcs module that requires tcs.core.
 - Generated modules require tcs.openapi with a minimum version equal to the generator's version. A tcs.openapi
   release must keep existing generated modules working (operation metadata format and engine parameters).
 - Never commit API keys; rotate the Gallery key regularly.
