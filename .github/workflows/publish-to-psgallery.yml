@@ -1,0 +1,27 @@
+name: Publish to PowerShell Gallery
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v0.1.8, etc.
+  workflow_dispatch:  # Allows manual triggering
+    inputs:
+      force_publish:
+        description: 'Force publish even if version exists'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+    uses: ntatschner/tcs-shared-workflows/.github/workflows/publish-to-psgallery.yml@main
+    with:
+      module-name: 'tcs.openapi'
+      module-path: 'modules/tcs.openapi'
+      force-publish: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_publish == 'true' }}
+      create-release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      run-validation: true
+    secrets:
+      psgallery-api-key: ${{ secrets.PSGALLERY_API_KEY }}

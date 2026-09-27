@@ -1,0 +1,123 @@
+name: CI - Validate Module
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'modules/**'
+      - 'tests/**'
+      - 'Build.ps1'
+      - 'PSScriptAnalyzerSettings.psd1'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'modules/**'
+      - 'tests/**'
+      - 'Build.ps1'
+      - 'PSScriptAnalyzerSettings.psd1'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+
+permissions:
+  contents: read
+
+env:
+  PESTER_VERSION: '5.7.1'
+  PSSA_VERSION: '1.23.0'
+  # Keep test runs offline and side-effect free
+  TCS_SKIP_UPDATE_CHECK: '1'
+  TCS_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  validate:
+    name: Validate Module
+    uses: ntatschner/tcs-shared-workflows/.github/workflows/ci-validate.yml@main
+    with:
+      module-name: 'tcs.openapi'
+      module-path: 'modules/tcs.openapi'
+      smoke-test-script-path: '.github/scripts/module-smoke-tests.ps1'
+
+  lint:
+    name: PSScriptAnalyzer Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $settingsPath = Join-Path $env:GITHUB_WORKSPACE 'PSScriptAnalyzerSettings.psd1'
+          $modulePath = Join-Path $env:GITHUB_WORKSPACE 'modules/tcs.openapi'
+          # Pester files are excluded: PSScriptAnalyzer cannot follow Pester's block scoping
+          $results = Invoke-ScriptAnalyzer -Path $modulePath -Recurse -Severity @('Error', 'Warning') -Settings $settingsPath |
+              Where-Object { $_.ScriptName -notlike '*.Tests.ps1' }
+          if ($results) {
+              $results | Format-Table ScriptName, Line, RuleName, Severity, Message -Wrap
+              Write-Error "PSScriptAnalyzer found $(@($results).Count) error(s)/warning(s). Failing build."
+              exit 1
+          }
+          Write-Host 'No PSScriptAnalyzer issues found.' -ForegroundColor Green
+
+  pester:
+    name: Pester (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pwsh-ubuntu
+            os: ubuntu-latest
+            shell: pwsh
+          - name: pwsh-windows
+            os: windows-latest
+            shell: pwsh
+          - name: pwsh-macos
+            os: macos-latest
+            shell: pwsh
+          - name: windows-powershell-5.1
+            os: windows-latest
+            shell: powershell
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester and PSScriptAnalyzer
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Force -Scope CurrentUser
+
+      - name: Run Pester
+        run: |
+          Import-Module Pester -RequiredVersion $env:PESTER_VERSION
+          $config = New-PesterConfiguration
+          $config.Run.Path = @(
+              (Join-Path $env:GITHUB_WORKSPACE 'modules/tcs.openapi'),
+              (Join-Path $env:GITHUB_WORKSPACE 'tests')
+          )
+          $config.Run.Exit = $false
+          $config.Run.PassThru = $true
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = Join-Path $env:GITHUB_WORKSPACE 'TestResults.xml'
+          $config.TestResult.OutputFormat = 'JUnitXml'
+          $result = Invoke-Pester -Configuration $config
+          if ($result.FailedCount -gt 0 -or $result.Result -ne 'Passed') {
+              Write-Error "$($result.FailedCount) test(s) failed"
+              exit 1
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results-${{ matrix.name }}
+          path: TestResults.xml

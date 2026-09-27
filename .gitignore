@@ -1,0 +1,16 @@
+# Test and build output
+TestResults.xml
+coverage.xml
+*.log
+temp/
+out/
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local agent settings
+.claude/settings.local.json

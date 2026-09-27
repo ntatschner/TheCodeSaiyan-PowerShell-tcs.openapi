@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest an improvement to tcs.openapi
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: modules
+    attributes:
+      label: Affected tcs modules
+      description: Other tcs modules that would use or be affected by this change.

@@ -1,0 +1,41 @@
+name: Generate PowerShell Documentation
+# Reusable workflow for PlatyPS documentation generation
+
+on:
+  workflow_run:
+    workflows: ['CI - Validate Module']
+    types: [completed]
+    branches: [ main ]
+  push:
+    branches:
+      - dev
+    paths:
+      - 'modules/**/*.ps1'
+      - 'modules/**/*.psm1'
+      - 'modules/**/*.psd1'
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'modules/**/*.ps1'
+      - 'modules/**/*.psm1'
+      - 'modules/**/*.psd1'
+  workflow_dispatch:
+
+jobs:
+  docs:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ntatschner/tcs-shared-workflows/.github/workflows/generate-docs.yml@main
+    with:
+      module-name: 'tcs.openapi'
+      module-path: 'modules/tcs.openapi'
+      docs-path: './docs'
+      # Pull request runs only check that docs generate; the PR merge ref cannot be pushed to
+      commit-docs: ${{ github.event_name != 'pull_request' }}
+      commit-message: 'docs: auto-generated PowerShell help via PlatyPS [skip ci]'
+      locale: 'en-GB'
+      ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '' }}

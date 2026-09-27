@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in tcs.openapi does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the command you ran and the full error.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: module-version
+    attributes:
+      label: tcs.openapi version
+      description: Output of `(Get-Module tcs.openapi).Version`
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `$PSVersionTable` and your operating system.
+      render: text
+    validations:
+      required: true
