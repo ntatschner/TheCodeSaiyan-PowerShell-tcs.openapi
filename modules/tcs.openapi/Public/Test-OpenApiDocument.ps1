@@ -187,7 +187,9 @@ function Test-OpenApiDocument {
                 }
                 $message = "No problems found in $($result.SourceName) ($($result.OperationCount) operation$plural)."
                 if ($PSBoundParameters.ContainsKey('InformationAction')) {
-                    Write-Information -MessageData $message
+                    # Passed explicitly: with -InformationAction Ignore, Windows PowerShell 5.1 sets
+                    # $InformationPreference to Ignore here and Write-Information then throws when it reads it
+                    Write-Information -MessageData $message -InformationAction $PSBoundParameters['InformationAction']
                 }
                 else {
                     # Shown by default so an empty result is not mistaken for the command doing nothing

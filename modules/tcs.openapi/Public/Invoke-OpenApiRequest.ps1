@@ -162,13 +162,25 @@ function Invoke-OpenApiRequest {
         foreach ($preference in @($callerPreference.Keys)) {
             $commonName = $preference.Replace('Preference', '')
             if (-not $PSBoundParameters.ContainsKey($commonName) -and -not ($preference -eq 'WarningPreference' -and $PSBoundParameters.ContainsKey('WarningAction'))) {
-                Set-Variable -Name $preference -Value $callerPreference[$preference]
+                $value = $callerPreference[$preference]
+                if ([string]$value -eq 'Ignore') {
+                    # See below: Ignore is not a valid preference variable value on Windows PowerShell 5.1
+                    $value = [System.Management.Automation.ActionPreference]::SilentlyContinue
+                }
+                Set-Variable -Name $preference -Value $value
             }
         }
     }
     if ($DebugPreference -eq 'Inquire') {
         # Windows PowerShell 5.1 sets Inquire for -Debug; do not prompt for every message
         $DebugPreference = 'Continue'
+    }
+    # Windows PowerShell 5.1 throws when Write-Warning (or Write-Verbose ...) reads a preference variable set to
+    # Ignore (as -WarningAction Ignore does); the engine writes its own messages with SilentlyContinue instead
+    foreach ($preference in @('VerbosePreference', 'DebugPreference', 'WarningPreference', 'InformationPreference')) {
+        if ([string](Get-Variable -Name $preference -ValueOnly) -eq 'Ignore') {
+            Set-Variable -Name $preference -Value ([System.Management.Automation.ActionPreference]::SilentlyContinue)
+        }
     }
 
     $writeError = {
