@@ -397,6 +397,24 @@ Describe 'End to end: generated E2E module against a live test server' {
         }
     }
 
+    Context 'persisted connection' {
+        It 'saves the connection with -Persist and loads it lazily after the in-memory context is gone' {
+            try {
+                Set-E2EContext -BaseUri $script:server.BaseUri -ApiKey (& $script:secret 'saved-key') -Persist
+                Remove-E2EContext -Confirm:$false
+                New-E2EItem -Name 'n' -Confirm:$false | Out-Null
+                (Get-EndToEndRequest -Server $script:server -Method POST -Path '/items')[0].Headers['X-API-Key'] | Should -Be 'saved-key'
+                (Get-E2EContext).Persisted | Should -BeTrue
+                $saved = Get-ChildItem -LiteralPath $env:TCS_CONFIG_ROOT -Recurse -File | ForEach-Object -Process { [System.IO.File]::ReadAllText($_.FullName) }
+                ($saved -join "`n") | Should -Not -Match 'saved-key'
+            }
+            finally {
+                Remove-E2EContext -Persisted -Confirm:$false
+                & $script:connect
+            }
+        }
+    }
+
     Context 'verbose and debug output' {
         It 'writes the request line to Verbose and redacts secrets in Debug' {
             $records = @(New-E2EItem -Body @{ name = 'n'; password = 'hunter2' } -Confirm:$false -Verbose -Debug 4>&1 5>&1 |
