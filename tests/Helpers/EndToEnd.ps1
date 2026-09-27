@@ -28,7 +28,10 @@ function New-EndToEndModule {
         [string]$OutputPath,
 
         [Parameter()]
-        [string]$NounPrefix
+        [string]$NounPrefix,
+
+        [Parameter()]
+        [string]$UnwrapProperty
     )
 
     $fixturePath = Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath '..') -ChildPath (Join-Path -Path 'Fixtures' -ChildPath $Fixture)
@@ -40,6 +43,9 @@ function New-EndToEndModule {
     }
     if ($NounPrefix) {
         $parameters['NounPrefix'] = $NounPrefix
+    }
+    if ($UnwrapProperty) {
+        $parameters['UnwrapProperty'] = $UnwrapProperty
     }
     return New-OpenApiModule @parameters
 }

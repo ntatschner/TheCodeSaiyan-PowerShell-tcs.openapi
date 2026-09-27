@@ -43,6 +43,11 @@ QUICK START
     (Get-Item, New-Item, ...) gets the PascalCase module name as its prefix
     instead, with finding OA042.
 
+    For APIs that wrap every result in an envelope such as
+    { "data": ..., "traceId": ... }, pass -UnwrapProperty data: the
+    commands then return the value of 'data' (when a response has it)
+    instead of the whole response. -Raw always returns the whole response.
+
 THE GENERATED MODULE
     <OutputPath>/<ModuleName>/
         <ModuleName>.psd1         manifest; RequiredModules tcs.openapi
@@ -82,17 +87,36 @@ CONNECTIONS AND AUTHENTICATION
     Get-<Prefix>Context shows every secret as ********.
 
 PAGING, DOWNLOADS AND RAW RESPONSES
-    Pageable operations (x-ms-pageable, a nextLink/next/@odata.nextLink
-    property next to one array, or a Link response header) get -All, which
-    follows the next links (same host only) and streams the items as they
-    arrive. Without -All one page is returned. Either way the output is
-    the items, typed with the item schema name ('<Service>.<Schema>').
+    Pageable operations get -All, which streams the items as they arrive.
+    Without -All one page is returned. Either way the output is the items,
+    typed with the item schema name ('<Service>.<Schema>'). Three kinds are
+    detected:
+
+        nextLink     x-ms-pageable, or a nextLink/next/@odata.nextLink
+                     property next to one array: the link is followed
+                     (same host only, never twice)
+        token        a nextToken/pageToken/cursor/continuationToken
+                     query parameter and a response with one array and a
+                     nextToken/nextPageToken/next_cursor (or same-named)
+                     property: the request is repeated with the token
+                     until it is empty or repeats
+        linkHeader   a Link response header with rel="next"
 
     Operations with a binary response get -OutFile, which streams the body
     to a file and returns the FileInfo. Without -OutFile the bytes are
     returned as one byte[].
 
     -Raw returns { StatusCode, Headers, Content } instead of objects.
+
+PATH PARAMETERS
+    Values are escaped as one path segment ('a/b' is sent as a%2Fb). A
+    router-style catch-all segment at the end of a path ('/files/*path',
+    or '{path*}') is read as the path parameter of that name, flagged
+    CatchAll: its value keeps its slashes and each segment is escaped on
+    its own (leading and trailing slashes are dropped). allowReserved path
+    parameters are sent the same way. Test-OpenApiDocument reports a path
+    parameter that is not in the path (OA023) and a {placeholder} without
+    a path parameter (OA024).
 
 ERRORS, RETRY AND LOGGING
     A non-2xx response is a non-terminating error with the id
@@ -114,7 +138,9 @@ NAMING
     the verb comes from the first word of the operationId (get/list -> Get,
     create/add -> New, update -> Set or Update, delete -> Remove, ...) or
     from the HTTP method, and the rest is the noun: <NounPrefix> plus the
-    PascalCase words, with the last word singular. Collisions add a path
+    PascalCase words, with the last word singular. A last word that repeats
+    the operation's HTTP method is dropped (ConnectorGet -> Get-Connector,
+    ConnectorPost -> New-Connector). Collisions add a path
     segment or the method (OA040); parameters that clash with common
     parameters get a location suffix (OA041).
 

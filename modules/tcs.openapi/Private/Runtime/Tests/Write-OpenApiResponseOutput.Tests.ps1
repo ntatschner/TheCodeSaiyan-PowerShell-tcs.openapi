@@ -39,4 +39,32 @@ Describe 'Write-OpenApiResponseOutput' {
             Write-OpenApiResponseOutput -InputObject $null | Should -BeNullOrEmpty
         }
     }
+
+    It 'writes the value of -UnwrapProperty instead of the whole object' {
+        InModuleScope -ModuleName tcs.openapi {
+            $result = Write-OpenApiResponseOutput -InputObject ([pscustomobject]@{ data = [pscustomobject]@{ id = 'h1' }; traceId = 't' }) -UnwrapProperty 'data' -TypeName 'T.Host'
+            $result.id | Should -Be 'h1'
+            $result.PSObject.TypeNames[0] | Should -Be 'T.Host'
+            $items = @(Write-OpenApiResponseOutput -InputObject ([pscustomobject]@{ data = @([pscustomobject]@{ id = 1 }, [pscustomobject]@{ id = 2 }) }) -UnwrapProperty 'data')
+            $items.id | Should -Be @(1, 2)
+            @(Write-OpenApiResponseOutput -InputObject ([pscustomobject]@{ data = $null }) -UnwrapProperty 'data').Count | Should -Be 0
+        }
+    }
+
+    It 'writes the whole object when the -UnwrapProperty is missing' {
+        InModuleScope -ModuleName tcs.openapi {
+            $result = Write-OpenApiResponseOutput -InputObject ([pscustomobject]@{ success = $true }) -UnwrapProperty 'data'
+            $result.success | Should -BeTrue
+            $list = @(Write-OpenApiResponseOutput -InputObject @([pscustomobject]@{ id = 1 }) -UnwrapProperty 'Count')
+            $list[0].id | Should -Be 1
+        }
+    }
+
+    It 'prefers the items property of a page over -UnwrapProperty' {
+        InModuleScope -ModuleName tcs.openapi {
+            $page = [pscustomobject]@{ data = @([pscustomobject]@{ id = 1 }); nextToken = 'x' }
+            $items = @(Write-OpenApiResponseOutput -InputObject $page -ItemsProperty 'data' -UnwrapProperty 'data')
+            $items[0].id | Should -Be 1
+        }
+    }
 }

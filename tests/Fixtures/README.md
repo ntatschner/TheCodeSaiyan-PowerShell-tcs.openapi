@@ -18,3 +18,10 @@ Used by `modules/tcs.openapi/Private/Document/Tests` and the `Import-OpenApiDocu
 | `document-external-ref.json` | External `$ref`s in an operation parameter schema, a parameter itself and a component schema used by an operation (OA020, operations flagged Unsupported), plus an unresolved local ref (OA021). |
 | `document-path-parameters.json` | Path-level parameters (including a `$ref`) merged with operation parameters (operation wins; header names case-insensitive), parameter `$ref` chains, deepObject/label styles, cookie and `allowReserved` parameters, a `content`-based parameter, duplicate operationIds differing only in case (OA011), missing operationIds (OA010) and a generated id that collides with an explicit one, JSON-pointer escaping (`a~1b~0c`) and percent-encoded refs. |
 | `document-composition.json` | `allOf` merge into Properties/Required (own properties win), discriminator, `oneOf`/`anyOf` request bodies (OA050), nullable `allOf` wrapper, `$ref` with a sibling description, additionalProperties (schema and `false`), inferred object/array types, readOnly/writeOnly, multipart encoding, `*/*+json` ordering. |
+| `document-path-templates.json` | Path templates: a router-style catch-all segment (`/consoles/{id}/*path`, path-level parameters) and `{rest*}` (CatchAll), a path parameter missing from the template (OA023) and a placeholder without a parameter (OA024). |
+
+## Real-world documents
+
+| Fixture | Exercises |
+|---|---|
+| `unifi-site-manager-1.0.0.json` | The UniFi Site Manager API 1.0.0 as published (added with the owner's approval): catch-all connector paths (`/v1/connector/consoles/{id}/*path`) with operationIds that end with the method (`ConnectorGet`), `nextToken` token paging with a `data` array, the `{ data, httpStatusCode, traceId }` envelope (`-UnwrapProperty data`), an `X-API-Key` api key and a `hostIds[]` array query parameter. Used by `tests/EndToEnd.UniFi.Tests.ps1` and the `Test-OpenApiDocument` tests. |

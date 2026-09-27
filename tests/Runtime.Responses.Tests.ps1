@@ -17,6 +17,9 @@ BeforeAll {
         'GET /text'    = @{ Body = 'plain text'; ContentType = 'text/plain; charset=utf-8' }
         'GET /secret'  = @{ Body = '{"access_token":"abc123","name":"x"}'; ContentType = 'application/json'; Headers = @{ 'Set-Cookie' = 'sid=zzz' } }
         'POST /secret' = @{ Body = '{"ok":true}'; ContentType = 'application/json' }
+        'GET /wrapped' = @{ Body = '{"data":{"id":"h1"},"httpStatusCode":200,"traceId":"t"}'; ContentType = 'application/json' }
+        'GET /wlist'   = @{ Body = '{"data":[{"id":1},{"id":2}],"traceId":"t"}'; ContentType = 'application/json' }
+        'GET /plain'   = @{ Body = '{"success":true}'; ContentType = 'application/json' }
     }
     Set-OpenApiContext -Service 'Resp' -BaseUri $script:server.BaseUri -ApiKey ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'KEY-999').SecurePassword) -MaxRetries 0
 
@@ -76,6 +79,26 @@ Describe 'Invoke-OpenApiRequest responses (end to end)' {
         $items[2] | Should -Be 3
         $single = @(Invoke-OpenApiRequest -Service 'Resp' -Operation (New-TestOperation -Path '/single'))
         $single.Count | Should -Be 1
+    }
+
+    It 'outputs the UnwrapProperty of the response, typed' {
+        $operation = New-TestOperation -Path '/wrapped' -TypeName 'Resp.Host'
+        $operation['UnwrapProperty'] = 'data'
+        $result = Invoke-OpenApiRequest -Service 'Resp' -Operation $operation
+        $result.id | Should -Be 'h1'
+        $result.PSObject.TypeNames[0] | Should -Be 'Resp.Host'
+        $operation['Path'] = '/wlist'
+        @(Invoke-OpenApiRequest -Service 'Resp' -Operation $operation).id | Should -Be @(1, 2)
+    }
+
+    It 'outputs the whole response when it has no UnwrapProperty, or with -Raw' {
+        $operation = New-TestOperation -Path '/plain'
+        $operation['UnwrapProperty'] = 'data'
+        (Invoke-OpenApiRequest -Service 'Resp' -Operation $operation).success | Should -BeTrue
+        $operation['Path'] = '/wrapped'
+        (Invoke-OpenApiRequest -Service 'Resp' -Operation $operation -Raw).Content | Should -Match 'traceId'
+        # Metadata of 0.1.x has no UnwrapProperty: the whole response
+        (Invoke-OpenApiRequest -Service 'Resp' -Operation (New-TestOperation -Path '/wrapped')).traceId | Should -Be 't'
     }
 
     It 'returns nothing for 204' {

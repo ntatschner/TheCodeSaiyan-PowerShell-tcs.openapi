@@ -4,6 +4,48 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-27
+
+### Added
+
+- Catch-all path segments: a final router-style segment such as `/v1/connector/consoles/{id}/*path` (or
+  `{path*}`) whose name is a path parameter becomes `{path}` in the model and the parameter is flagged
+  `CatchAll`. The engine keeps the slashes of a `CatchAll` (or `allowReserved`) path value and escapes each
+  segment, so `-Path 'proxy/network/integration/v1/sites'` reaches `.../consoles/<id>/proxy/network/integration/v1/sites`.
+- Token paging (`Paging.Kind = 'token'`): a `nextToken`, `pageToken`, `next_token`, `page_token`, `cursor`,
+  `continuationToken` or `continuation_token` query parameter with a response object that has one array and the
+  next token (`nextToken`, `nextPageToken`, `next_cursor`, `nextCursor`, ... or the parameter's name). The
+  commands output the items and get `-All`, which repeats the request with each response's token until it is
+  empty or repeats.
+- `New-OpenApiModule -UnwrapProperty <name>` (for example `data`): commands whose 2xx JSON response is an object
+  with that property output its value instead of the whole response, typed with the property's schema name.
+  Stored per operation as `UnwrapProperty` in `OpenApi/operations.json`; not applied with `-Raw` or to pageable
+  operations.
+- `Test-OpenApiDocument` findings OA023 (path parameter that is not in the path template, Warning) and OA024
+  (path template placeholder without a path parameter, Error).
+- The UniFi Site Manager API document as a fixture, with an end-to-end test of the module generated from it.
+
+### Changed
+
+- Naming: when the noun from an operationId ends with the operation's own HTTP method word and other words
+  remain, the word is dropped: `ConnectorGet` -> `Get-<Prefix>Connector`, `ConnectorPost` -> `New-`,
+  `ConnectorPut` -> `Set-`, `ConnectorPatch` -> `Update-`, `ConnectorDelete` -> `Remove-<Prefix>Connector`.
+  Regenerating a module from such a document renames those commands.
+- The generated README (and the `Set-<Prefix>Context` example) shows the credential parameters of the
+  document's security schemes (`-ApiKey`, `-Credential`, `-BearerToken` or `-ClientId`/`-ClientSecret`) instead
+  of always `-BearerToken`, and `-BaseUri` only when the document has no default server.
+- Generated modules require tcs.openapi 0.2.0. Metadata written by 0.1.x keeps working: a missing `CatchAll`,
+  token paging or `UnwrapProperty` means the earlier behaviour.
+
+### Fixed
+
+- `Test-OpenApiDocument -InformationAction Ignore` threw on Windows PowerShell 5.1 ("The value Ignore is not
+  supported for an ActionPreference variable") for a document without findings.
+- `-WarningAction Ignore` on a generated command (or on `Invoke-OpenApiRequest`) no longer makes the engine's own
+  warnings (for example when paging stops) throw on Windows PowerShell 5.1.
+- A path parameter value such as `proxy/network/...` of a catch-all path was sent as a literal `*path` segment
+  and the value was dropped.
+
 ## [0.1.1] - 2026-09-27
 
 ### Added

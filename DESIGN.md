@@ -35,7 +35,7 @@ enforces this, the exports and the help.
 |---|---|---|
 | `Import-OpenApiDocument -Path <file> \| -Uri <url> \| -InputObject <string>` | Generator | Returns the normalised **document model** (below). JSON always; YAML when `ConvertFrom-Yaml` (powershell-yaml) is available, otherwise a clear error. |
 | `Test-OpenApiDocument -Path/-Uri/-InputObject \| -Document <model>` | Generator | Returns **findings** `{ Severity (Error/Warning/Information), Code, Pointer (JSON pointer), Message, Operation }` for invalid structure and for features the generator/runtime do not support. Never throws for document problems. |
-| `New-OpenApiModule -Path/-Uri/-Document -ModuleName <name> -OutputPath <dir> [-NounPrefix] [-ModuleVersion] [-Author] [-Force] [-WhatIf]` | Generator | Writes a complete module (below). Returns a result object `{ ModuleName, Path, ManifestPath, Functions (name, operationId, file, action), Findings (document + generator), Skipped, Files (every file with its action) }`. Supports ShouldProcess; `-WhatIf` writes nothing. Existing generated files are replaced only with `-Force`; `Overrides.ps1` is never overwritten. `-NounPrefix` has no default (documented as "always set it"); `-ModuleVersion` defaults to 0.1.0 and `-Author` to 'tcs.openapi' so output never depends on the machine. |
+| `New-OpenApiModule -Path/-Uri/-Document -ModuleName <name> -OutputPath <dir> [-NounPrefix] [-UnwrapProperty <name>] [-ModuleVersion] [-Author] [-Force] [-WhatIf]` | Generator | Writes a complete module (below). `-UnwrapProperty` (e.g. `data`) makes the commands output that property of the response instead of the whole response (see Operation metadata). Returns a result object `{ ModuleName, Path, ManifestPath, Functions (name, operationId, file, action), Findings (document + generator), Skipped, Files (every file with its action) }`. Supports ShouldProcess; `-WhatIf` writes nothing. Existing generated files are replaced only with `-Force`; `Overrides.ps1` is never overwritten. `-NounPrefix` has no default (documented as "always set it"); `-ModuleVersion` defaults to 0.1.0 and `-Author` to 'tcs.openapi' so output never depends on the machine. |
 | `Set-OpenApiContext -Service <name> -BaseUri [-ApiKey <SecureString>] [-Credential <PSCredential>] [-BearerToken <SecureString>] [-ClientId -ClientSecret <SecureString> -TokenUri [-Scope]] [-Header <hashtable>] [-TimeoutSec] [-Proxy] [-ProxyCredential] [-SkipCertificateCheck] [-MaxRetries] [-Persist] [-PassThru]` | Runtime | Stores the connection for a service in module scope. `-Persist` saves secrets with `Set-ModuleSecret -ModuleName tcs.openapi -Name <service>.<kind>` and settings as JSON; a later session loads them lazily. |
 | `Get-OpenApiContext [-Service]` | Runtime | Returns contexts with every secret shown as `********`. |
 | `Remove-OpenApiContext -Service [-Persisted]` | Runtime | Clears the context (and saved secrets with `-Persisted`). |
@@ -67,7 +67,8 @@ Operation {
   PSTypeName  : 'Tcs.OpenApi.Operation'
   OperationId : string (spec value, or generated '<method><PathPascal>' and a finding when missing)
   Method      : 'GET'|'PUT'|'POST'|'DELETE'|'OPTIONS'|'HEAD'|'PATCH'|'TRACE' (upper case)
-  Path        : '/pets/{petId}'
+  Path        : '/pets/{petId}'          # a final catch-all segment '*name' or '{name*}' that names a path parameter
+                                       # is written '{name}' and that parameter gets CatchAll = true
   Tags        : [string]
   Summary, Description, Deprecated (bool), ExternalDocsUrl
   Parameters  : [ Parameter ]          # path-level merged in; operation-level wins on (Name, In)
@@ -75,11 +76,17 @@ Operation {
   Responses   : [ { StatusCode ('200'|'2XX'|'default'...), Description, Content: [ MediaType ], Headers } ]
   Security    : null (use document default) | [] (no auth) | [ { schemeName: [scopes] } ]
   Paging      : null | { Kind ('nextLink'|'linkHeader'), ItemsProperty, NextLinkProperty }   # from x-ms-pageable, or detected: response object with one array property + a 'nextLink'/'next'/'@odata.nextLink' string
+              |        { Kind 'token', ItemsProperty, TokenParameter, TokenProperty }
+                # token: a query parameter named nextToken, pageToken, next_token, page_token, cursor, continuationToken or
+                # continuation_token (any case) and a first 2xx JSON response object with exactly one array property and a
+                # string property named like the parameter (preferred) or nextToken, nextPageToken, next_page_token,
+                # next_token, next_cursor, nextCursor (any case). Order: x-ms-pageable, nextLink, token, linkHeader.
   Extensions  : { 'x-...': value }     # includes x-ps-name, x-ps-noun, x-ps-verb overrides
   Unsupported : bool                   # true when the operation uses an external $ref (OA020); the generator skips it (OA070)
 }
 
-Parameter { Name (spec), In ('path'|'query'|'header'|'cookie'), Required, Description, Deprecated, Schema, Style, Explode, AllowReserved, Example }
+Parameter { Name (spec), In ('path'|'query'|'header'|'cookie'), Required, Description, Deprecated, Schema, Style, Explode, AllowReserved, Example, CatchAll }
+  # CatchAll: true only for the path parameter of a catch-all segment (its value is a path of its own)
   # defaults per spec: path/header -> simple, query/cookie -> form; explode true for form, false otherwise
   # Swagger 2.0 collectionFormat maps: csv->form/explode false, ssv->spaceDelimited, pipes->pipeDelimited, multi->form/explode true
 
@@ -109,10 +116,13 @@ through `Get-OpenApiMember`, so it accepts these objects as well as hand-built h
 
 ```
 { OperationId, Method, Path, Service, Deprecated,
-  Parameters : [ { Name, In, Style, Explode, AllowReserved } ],   # spec names; wrappers pass values keyed by spec name
+  Parameters : [ { Name, In, Style, Explode, AllowReserved [, CatchAll] } ],   # spec names; wrappers pass values keyed by spec name;
+                                                                  # CatchAll written only when true
   RequestContentTypes : [string], ResponseContentTypes : [string], BinaryResponse (bool),
   Security : null | [] | [ { scheme: [scopes] } ], SecuritySchemes : { name: SecurityScheme },  # copy of the relevant schemes
-  Paging : null | { Kind, ItemsProperty, NextLinkProperty }, ResponseTypeName : 'Service.SchemaName' | null }
+  Paging : null | { Kind, ItemsProperty, NextLinkProperty } | { Kind 'token', ItemsProperty, TokenParameter, TokenProperty },
+  ResponseTypeName : 'Service.SchemaName' | null,
+  UnwrapProperty : name }            # only with New-OpenApiModule -UnwrapProperty, see below
 ```
 
 - `Service` is the module name (the connection context of the generated module is `Set-OpenApiContext -Service <ModuleName>`).
@@ -124,17 +134,22 @@ through `Get-OpenApiMember`, so it accepts these objects as well as hand-built h
   operation whose `Paging.ItemsProperty` names an array of a named schema - of those items, because the engine
   outputs the items of a page.
 - `BinaryResponse` is true when a 2xx response has a binary media type/schema.
+- `UnwrapProperty` is written for an operation without `Paging` whose first 2xx JSON response schema is an object
+  with the property named by `New-OpenApiModule -UnwrapProperty`; `ResponseTypeName` is then the type of that
+  property (or of its array items), not of the envelope.
+- Backwards compatibility: metadata written by 0.1.x has no `CatchAll`, token `Paging` or `UnwrapProperty`; a
+  missing member means the old behaviour (escaped path value, nextLink/Link paging, whole response).
 
 ## Runtime behaviour (Invoke-OpenApiRequest)
 
-- **URL**: context `BaseUri` + path; path values escaped per segment (`[uri]::EscapeDataString`), `allowReserved` honoured for query.
+- **URL**: context `BaseUri` + path; path values escaped per segment (`[uri]::EscapeDataString`), `allowReserved` honoured for query. A scalar value of a `CatchAll` or `AllowReserved` path parameter (simple style) keeps its `/`: it is trimmed of leading/trailing `/`, split on `/`, each segment escaped and re-joined (`-Path 'proxy/network/v1/sites'` -> `/consoles/c1/proxy/network/v1/sites`).
 - **Query/header/cookie serialisation**: only parameters present in the passed hashtables are sent (wrappers pass `$PSBoundParameters`-derived values only). Arrays and objects follow style/explode (`form`, `spaceDelimited`, `pipeDelimited`, `deepObject`); booleans as `true`/`false`; `[datetime]` as ISO 8601 round-trip (`o`); cookies as one `Cookie` header.
 - **Bodies**: by content type - JSON (`ConvertTo-Json -Depth 64 -Compress`, `charset=utf-8`), `application/x-www-form-urlencoded` (hashtable -> encoded pairs), `multipart/form-data` (hashtable; `[System.IO.FileInfo]`/path-with-`-AsFile` values become file parts; built with `System.Net.Http.MultipartFormDataContent` on both editions), `application/octet-stream`/other binary (`[byte[]]`, `[IO.Stream]` or `[IO.FileInfo]`), `text/*` (string). Explicit `$null` values are sent as JSON null.
 - **Auth**: the operation's `Security` (or the document default) picks the first requirement whose schemes all have credentials in the context. apiKey header/query/cookie; http basic (`Credential`); http bearer (`BearerToken`); oauth2 clientCredentials (fetch token from the context `TokenUri`, else the flow's `TokenUrl`; scopes from the context, else the requirement; cache until 60 s before expiry, refresh on 401 once). A context `BearerToken` satisfies any oauth2 or openIdConnect scheme and wins over client credentials. `Security = []` sends no credentials. Secrets are held as `SecureString` and decoded only when building the request.
 - **Transport**: `HttpClient` shared per service (created lazily, disposed on module removal) so behaviour is identical on 5.1 and 7; timeout, proxy, SkipCertificateCheck (PS7 via handler callback; 5.1 via `ServerCertificateCustomValidationCallback` on `HttpClientHandler` where available, otherwise a clear error).
 - **Retry**: `Invoke-WithRetry` from tcs.core with `-RetryOnStatusCode 408,429,500,502,503,504` for idempotent methods and 429/503 only for POST/PATCH; honours `Retry-After`; `MaxRetries` from context (default 3).
-- **Responses**: JSON -> objects via `ConvertFrom-OpenApiResponseJson` (no schema validation, no value rewriting: date strings stay strings) with `PSTypeName` = `ResponseTypeName` added to each object (array items individually); text and XML -> string; `-Raw` returns `{ StatusCode, Headers, Content (string|byte[]) }` (PSTypeName `Tcs.OpenApi.RawResponse`); `-OutFile` streams the body to the file and returns the `FileInfo`; a binary response without `-OutFile` returns the body as one `byte[]`; 204/empty -> nothing.
-- **Paging**: a pageable operation always outputs the items of each page (the `ItemsProperty` array), never the page object. With `-All`, follow `nextLink` (relative or absolute, same scheme/host/port only, never a URL twice) or the `Link: rel="next"` header with GET and no body, emitting items as they arrive (stopping the pipeline stops fetching); without `-All`, one page and a Verbose note that more exist.
+- **Responses**: JSON -> objects via `ConvertFrom-OpenApiResponseJson` (no schema validation, no value rewriting: date strings stay strings) with `PSTypeName` = `ResponseTypeName` added to each object (array items individually); with `UnwrapProperty` (and no paging) the value of that property is output instead of the response object when the parsed response has it (array values item by item), never with `-Raw`; text and XML -> string; `-Raw` returns `{ StatusCode, Headers, Content (string|byte[]) }` (PSTypeName `Tcs.OpenApi.RawResponse`); `-OutFile` streams the body to the file and returns the `FileInfo`; a binary response without `-OutFile` returns the body as one `byte[]`; 204/empty -> nothing.
+- **Paging**: a pageable operation always outputs the items of each page (the `ItemsProperty` array), never the page object. With `-All`, follow `nextLink` (relative or absolute, same scheme/host/port only, never a URL twice) or the `Link: rel="next"` header with GET and no body, emitting items as they arrive (stopping the pipeline stops fetching); without `-All`, one page and a Verbose note that more exist. Token paging (`Kind = 'token'`): with `-All` the request is repeated with the same method, body and query parameters plus `TokenParameter` = the response's `TokenProperty`, until the token is empty or missing, or repeats (warning); `-Raw -All` returns every raw page.
 - **Errors**: non-2xx -> `ErrorRecord` with `FullyQualifiedErrorId = 'OpenApi.<Service>.<StatusCode>'` (other ids: `OpenApi.<Service>.Connection` for network failures, `.Authentication` for TLS/authentication exceptions, `.NoContext` when the service has no context, `.InvalidArgument` for values that cannot be serialised, `.OutFile` when the file cannot be written, and `OpenApi.MissingService`), category mapped from status, `TargetObject = { Method, Uri, StatusCode, Headers, Body (parsed problem+json when possible), OperationId }`, message from problem+json `title`/`detail` or the status text. Written with `$Cmdlet.WriteError()` when `-Cmdlet` is passed (so `-ErrorAction` and pipelines behave), otherwise `Write-Error`.
 - **Preferences**: `-Verbose`, `-Debug` and `-WarningAction` given to the calling (generated) command are read from `$Cmdlet.MyInvocation.BoundParameters` (`$Cmdlet.SessionState` only sees the calling module's script scope); otherwise the preference visible to the calling module applies.
 - **Verbose/Debug**: request line and status always in Verbose; headers and bodies only in Debug, with `Authorization`, api-key headers/query values, cookies and JSON properties named like `password|secret|token|apiKey|client_secret` replaced by `********`.
@@ -155,7 +170,11 @@ through `Get-OpenApiMember`, so it accepts these objects as well as hand-built h
                            <Prefix> = NounPrefix, else the PascalCase module name; -BaseUri of Set- defaults to the first absolute
                            http(s) server URL (server variables replaced by their defaults), else it is mandatory
   Overrides.ps1            created once, never overwritten; functions defined here replace generated ones of the same name
-  README.md                generated command list
+  README.md                generated command list; its "Getting started" shows Set-<Prefix>Context with the credential
+                           parameters of the document's security (first document requirement, else the first operation
+                           requirement, else the first scheme: apiKey -ApiKey, http basic -Credential, http bearer and
+                           other oauth2/openIdConnect -BearerToken, oauth2 clientCredentials -ClientId/-ClientSecret) and
+                           -BaseUri only when there is no default server
 ```
 
 Output is deterministic (same document and options -> byte-identical files: ordinal sorting, LF line endings,
@@ -164,7 +183,7 @@ UTF-8 with a BOM only when a file is not ASCII). Operations without an operation
 
 ### Naming
 1. `x-ps-name` (full `Verb-Noun`) wins; else `x-ps-verb`/`x-ps-noun`.
-2. From operationId: split camelCase/PascalCase/snake/kebab into words; if the first word maps to a verb (get/list/find/search -> Get (list/search/find -> Get with plural->singular noun + note), create/add/new/post -> New, update/patch/set/put/replace -> Set for PUT, Update for PATCH, delete/remove -> Remove, start/stop/restart/enable/disable/approve/deny/import/export/test/invoke/send/reset/clear/copy/move/rename/sync/publish/register/unregister/connect/disconnect -> matching approved verb; unknown -> method default), the rest is the noun.
+2. From operationId: split camelCase/PascalCase/snake/kebab into words; if the first word maps to a verb (get/list/find/search -> Get (list/search/find -> Get with plural->singular noun + note), create/add/new/post -> New, update/patch/set/put/replace -> Set for PUT, Update for PATCH, delete/remove -> Remove, start/stop/restart/enable/disable/approve/deny/import/export/test/invoke/send/reset/clear/copy/move/rename/sync/publish/register/unregister/connect/disconnect -> matching approved verb; unknown -> method default), the rest is the noun. When the noun then ends with the operation's own HTTP method word (Get, Post, Put, Patch, Delete, Head, Options, Trace) and other words remain, that word is dropped (`ConnectorGet` GET -> `Get-Connector`, `ConnectorPost` POST -> `New-Connector`, `ConnectorPatch` -> `Update-Connector`); a method word that is not the operation's method stays part of the noun (`listProductOptions` -> `Get-ProductOption`).
 3. No operationId: method default verb (GET Get, POST New, PUT Set, PATCH Update, DELETE Remove, HEAD/OPTIONS Test/Get) + noun from the last non-parameter path segments.
 4. Noun = `<NounPrefix>` + PascalCase words, singularised last word (simple English rules, list of irregulars), only `[A-Za-z0-9]`.
 5. Collisions: add the distinguishing path segment or method as a word (`Get-PetOwner` vs `Get-PetOwnerByName`), never a hash; last resort a number suffix; every rename is a Warning finding. Order is deterministic (sorted by path, then method), so adding operations never renames existing ones unless they collide.
@@ -183,19 +202,19 @@ UTF-8 with a BOM only when a file is not ASCII). Operations without an operation
 - Enums -> `[ValidateSet(...)]` (array items too); `ValidatePattern`/`ValidateRange`/`ValidateLength` from pattern/minimum/maximum/minLength/maxLength.
 - Every parameter `ValueFromPipelineByPropertyName`; aliases: the spec name when different from the PS name, and `Id` for a path parameter named `<noun>Id`.
 - Body: JSON object bodies are flattened into parameters (one per top-level property, readOnly omitted; nested objects as `[hashtable]`) **and** a `-Body` parameter (`[object]`, separate parameter set) for passing the whole body; other body shapes get only `-Body` with a type matching the media type (`[object]` for arrays/primitives/oneOf, `[hashtable]` for form/multipart, `[object]` for binary). No defaults are injected.
-- Every wrapper also has `-Raw` and, when the operation is pageable, `-All`; when a response is binary, `-OutFile`.
+- Every wrapper also has `-Raw` and, when the operation is pageable (any paging kind), `-All`; when a response is binary, `-OutFile`.
 - `SupportsShouldProcess` for every method except GET/HEAD/OPTIONS; `ConfirmImpact = 'High'` for DELETE, `'Medium'` otherwise.
 
 ### Wrapper shape (rendered from `Templates/Function.ps1.template`)
 Comment-based help (summary -> SYNOPSIS, description -> DESCRIPTION, parameter descriptions, one runnable EXAMPLE built from required parameters, `.LINK` to externalDocs, deprecation note), `[CmdletBinding(...)]`, `[OutputType('<Service>.<Schema>')]` when known, `param()`, `process {}` that: builds the four parameter hashtables and the body from `$PSBoundParameters` using a small generated name map, calls `ShouldProcess` when needed, then `Invoke-OpenApiRequest -Service $script:TcsOpenApiService -Operation $script:TcsOpenApiOperations['<id>'] ... -Cmdlet $PSCmdlet`. Generated code must parse, and every function must bind (`Get-Command -Syntax`) - the generator checks both before writing.
 
 ## Findings codes (non-exhaustive)
-`OA001` invalid/unsupported document version, `OA002` missing paths, `OA010` missing operationId (generated), `OA011` duplicate operationId, `OA020` external $ref, `OA021` unresolved $ref, `OA022` circular schema (information), `OA030` unsupported security scheme type (openIdConnect, oauth2 flows other than clientCredentials), `OA031` multiple non-null types (3.1), `OA040` renamed command (collision), `OA041` renamed parameter (reserved/duplicate), `OA042` renamed command (would shadow a core PowerShell command), `OA050` oneOf/anyOf body (passed through as -Body only), `OA051` unsupported media type (sent as raw string/bytes), `OA060` deprecated operation, `OA070` operation skipped.
+`OA001` invalid/unsupported document version, `OA002` missing paths, `OA010` missing operationId (generated), `OA011` duplicate operationId, `OA020` external $ref, `OA021` unresolved $ref, `OA022` circular schema (information), `OA023` path parameter not in the path template (warning; ignored), `OA024` path template placeholder without a path parameter (error), `OA030` unsupported security scheme type (openIdConnect, oauth2 flows other than clientCredentials), `OA031` multiple non-null types (3.1), `OA040` renamed command (collision), `OA041` renamed parameter (reserved/duplicate), `OA042` renamed command (would shadow a core PowerShell command), `OA050` oneOf/anyOf body (passed through as -Body only), `OA051` unsupported media type (sent as raw string/bytes), `OA060` deprecated operation, `OA070` operation skipped.
 
 ## Testing
 - Unit tests per function (pure functions take/return objects, no disk).
-- Fixtures: petstore-like 3.0, 3.1, Swagger 2.0, circular, external-ref, reserved names, auth variants, bodies (json/form/multipart/binary/array), paging (nextLink + Link header).
+- Fixtures: petstore-like 3.0, 3.1, Swagger 2.0, circular, external-ref, reserved names, auth variants, bodies (json/form/multipart/binary/array), paging (nextLink + Link header), path templates (catch-all, OA023/OA024) and a real-world document (UniFi Site Manager: catch-all paths, token paging, a `data` envelope).
 - Snapshot tests: generated module for 3 fixtures compared with checked-in expected output (`tests/Snapshots/`), regenerated with `Build.ps1 -Task UpdateSnapshots`.
-- End-to-end (`tests/EndToEnd.*.Tests.ps1`): `tests/Helpers/TestHttpServer.ps1` starts an `HttpListener` on 127.0.0.1 with a free port in a background runspace, records requests and serves scripted responses; modules generated from the fixtures (petstore 3.0, Swagger 2.0, 3.1 and `e2e-api.json`) with the real generator are imported with the real engine and called against it (every auth kind, serialisation, bodies, paging, retry on 429 with Retry-After, problem+json errors, downloads, -WhatIf, -ErrorAction, pipelines, persisted contexts, Overrides.ps1).
+- End-to-end (`tests/EndToEnd.*.Tests.ps1`): `tests/Helpers/TestHttpServer.ps1` starts an `HttpListener` on 127.0.0.1 with a free port in a background runspace, records requests and serves scripted responses; modules generated from the fixtures (petstore 3.0, Swagger 2.0, 3.1, `e2e-api.json` and `unifi-site-manager-1.0.0.json` with `-UnwrapProperty data`) with the real generator are imported with the real engine and called against it (every auth kind, serialisation, bodies, paging, retry on 429 with Retry-After, problem+json errors, downloads, -WhatIf, -ErrorAction, pipelines, persisted contexts, Overrides.ps1).
 - Repository guards (`tests/Module.Tests.ps1`): manifest, silent import, exports = FunctionsToExport = Public files, one function per file, approved verbs, a test per function, full help on public commands, identical about topics, BOM on non-ASCII files.
 - PSScriptAnalyzer clean with repo settings; bind check on every generated function.

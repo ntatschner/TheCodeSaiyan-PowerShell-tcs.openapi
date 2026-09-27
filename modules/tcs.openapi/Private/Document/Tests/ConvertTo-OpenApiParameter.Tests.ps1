@@ -18,13 +18,14 @@ Describe 'ConvertTo-OpenApiParameter' {
             param($Convert)
             $parameter = & $Convert '{"name":"q","in":"query","description":"d","deprecated":true,"example":"ex","schema":{"type":"string"}}'
             $parameter.PSObject.TypeNames | Should -Contain 'Tcs.OpenApi.Parameter'
-            @($parameter.PSObject.Properties.Name) | Should -Be @('Name', 'In', 'Required', 'Description', 'Deprecated', 'Schema', 'Style', 'Explode', 'AllowReserved', 'Example')
+            @($parameter.PSObject.Properties.Name) | Should -Be @('Name', 'In', 'Required', 'Description', 'Deprecated', 'Schema', 'Style', 'Explode', 'AllowReserved', 'Example', 'CatchAll')
             $parameter.Name | Should -Be 'q'
             $parameter.Description | Should -Be 'd'
             $parameter.Deprecated | Should -BeTrue
             $parameter.Example | Should -Be 'ex'
             $parameter.Schema.Type | Should -Be 'string'
             $parameter.Required | Should -BeFalse
+            $parameter.CatchAll | Should -BeFalse
         }
     }
 

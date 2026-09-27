@@ -46,6 +46,12 @@ Describe 'Invoke-OpenApiRequest parameter serialisation (end to end)' {
         $script:server.Requests[0].RawUrl | Should -Be '/api/v1/items/a%20b%2Fc/sub/x,y'
     }
 
+    It 'keeps the slashes of a catch-all path parameter' {
+        $operation = @{ OperationId = 'proxy'; Method = 'GET'; Path = '/consoles/{id}/{path}'; Security = @(); Parameters = @(@{ Name = 'id'; In = 'path' }, @{ Name = 'path'; In = 'path'; CatchAll = $true }) }
+        $null = Invoke-OpenApiRequest -Service 'Ser' -Operation $operation -PathParameters @{ id = 'c1'; path = 'proxy/network/integration/v1/sites' }
+        $script:server.Requests[0].RawUrl | Should -Be '/api/v1/consoles/c1/proxy/network/integration/v1/sites'
+    }
+
     It 'serialises query arrays and objects with their style and explode settings' {
         $query = [ordered]@{
             tags   = @('red', 'green')

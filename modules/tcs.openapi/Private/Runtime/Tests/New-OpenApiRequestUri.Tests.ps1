@@ -29,6 +29,21 @@ Describe 'New-OpenApiRequestUri' {
         }
     }
 
+    It 'keeps the slashes of a CatchAll or AllowReserved path parameter and escapes each segment' {
+        InModuleScope -ModuleName tcs.openapi {
+            $parameters = @(@{ Name = 'id'; In = 'path' }, @{ Name = 'path'; In = 'path'; CatchAll = $true }, [pscustomobject]@{ Name = 'rest'; In = 'path'; AllowReserved = $true })
+            New-OpenApiRequestUri -BaseUri 'https://a' -Path '/consoles/{id}/{path}' -Parameter $parameters -PathParameters @{ id = 'c/1'; path = '/proxy/network/a b/v1/' } | Should -Be 'https://a/consoles/c%2F1/proxy/network/a%20b/v1'
+            New-OpenApiRequestUri -BaseUri 'https://a' -Path '/files/{rest}' -Parameter $parameters -PathParameters @{ rest = 'x/y?z' } | Should -Be 'https://a/files/x/y%3Fz'
+        }
+    }
+
+    It 'escapes the slashes of an ordinary path parameter' {
+        InModuleScope -ModuleName tcs.openapi {
+            $parameters = @(@{ Name = 'path'; In = 'path'; CatchAll = $false })
+            New-OpenApiRequestUri -BaseUri 'https://a' -Path '/f/{path}' -Parameter $parameters -PathParameters @{ path = 'a/b' } | Should -Be 'https://a/f/a%2Fb'
+        }
+    }
+
     It 'throws ArgumentException for a missing path parameter' {
         InModuleScope -ModuleName tcs.openapi {
             { New-OpenApiRequestUri -BaseUri 'https://a' -Path '/p/{id}' -PathParameters @{} } | Should -Throw -ExceptionType ([System.ArgumentException]) -ExpectedMessage "*'id'*"

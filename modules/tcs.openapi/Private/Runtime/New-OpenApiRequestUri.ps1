@@ -2,6 +2,10 @@ function New-OpenApiRequestUri {
     <#
     .SYNOPSIS
         Builds the request URL from the base URI, the path template, and the path and query parameter values.
+    .DESCRIPTION
+        Path values are escaped as one segment, except for a scalar value of a CatchAll or AllowReserved path
+        parameter with the simple style: it keeps its '/' (leading and trailing ones are trimmed) and each
+        segment is escaped on its own.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
@@ -48,6 +52,12 @@ function New-OpenApiRequestUri {
             $pathStyle = $style.Style
             if ($pathStyle -ne 'label' -and $pathStyle -ne 'matrix') {
                 $pathStyle = 'simple'
+            }
+            $value = $lookup[$name]
+            if (($style.CatchAll -or $style.AllowReserved) -and $pathStyle -eq 'simple' -and (Get-OpenApiValueShape -Value $value) -eq 'Scalar') {
+                # A catch-all segment ('/consoles/{id}/*path') holds a path of its own
+                $segments = (ConvertTo-OpenApiScalarString -Value $value).Trim('/').Split('/')
+                return ((@($segments | ForEach-Object -Process { ConvertTo-OpenApiUriEncoded -Value $_ })) -join '/')
             }
             return (ConvertTo-OpenApiPathParameter -Name $name -Value $lookup[$name] -Style $pathStyle -Explode:$style.Explode)
         })

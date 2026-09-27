@@ -10,8 +10,11 @@ function ConvertTo-OpenApiGenMetadataEntry {
         those requirements name. ResponseTypeName is '<Service>.<RefName>' of the first 2xx JSON
         response schema (or of its array items); for an operation whose Paging names an
         ItemsProperty it is the type of that property's items, because the engine outputs the items
-        of each page, not the page. The result is an ordered dictionary so the JSON
-        written from it keeps the documented property order.
+        of each page, not the page. Parameters get CatchAll only when it is true (a catch-all path
+        segment). With -UnwrapProperty, an operation without paging whose first 2xx JSON response schema
+        is an object with that property gets UnwrapProperty (the last entry), and ResponseTypeName is the
+        type of that property (or of its array items) instead. The result is an ordered dictionary so
+        the JSON written from it keeps the documented property order.
     #>
     [CmdletBinding()]
     [OutputType([System.Collections.Specialized.OrderedDictionary])]
@@ -23,7 +26,12 @@ function ConvertTo-OpenApiGenMetadataEntry {
         [object]$Document,
 
         [Parameter(Mandatory = $true)]
-        [string]$Service
+        [string]$Service,
+
+        [Parameter()]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$UnwrapProperty
     )
 
     $parameters = @(foreach ($parameter in @($Operation.Parameters | Where-Object -FilterScript { $null -ne $_ })) {
@@ -38,13 +46,17 @@ function ConvertTo-OpenApiGenMetadataEntry {
             if ($null -eq $explode) {
                 $explode = ($style -eq 'form')
             }
-            [ordered]@{
+            $entry = [ordered]@{
                 Name          = [string]$parameter.Name
                 In            = [string]$parameter.In
                 Style         = $style
                 Explode       = [bool]$explode
                 AllowReserved = ($parameter.AllowReserved -eq $true)
             }
+            if ($parameter.CatchAll -eq $true) {
+                $entry['CatchAll'] = $true
+            }
+            $entry
         })
 
     $requestContentTypes = @()
@@ -55,6 +67,7 @@ function ConvertTo-OpenApiGenMetadataEntry {
     $responseContentTypes = New-Object -TypeName System.Collections.ArrayList
     $binaryResponse = $false
     $responseTypeName = $null
+    $unwrap = $null
     $successResponses = @($Operation.Responses | Where-Object -FilterScript { $null -ne $_ -and ([string]$_.StatusCode) -match '^2' })
     $sortedResponses = Get-OpenApiGenOrdinalSorted -InputObject $successResponses -Key { [string]$_.StatusCode }
     foreach ($response in @($Operation.Responses | Where-Object -FilterScript { $null -ne $_ })) {
@@ -70,15 +83,30 @@ function ConvertTo-OpenApiGenMetadataEntry {
             if ($kind -eq 'binary') {
                 $binaryResponse = $true
             }
-            if ($kind -eq 'json' -and $null -eq $responseTypeName -and $null -ne $media.Schema) {
+            if ($kind -eq 'json' -and $null -eq $responseTypeName -and $null -eq $unwrap -and $null -ne $media.Schema) {
                 $refName = $media.Schema.RefName
                 $itemsProperty = [string](Get-OpenApiGenMapValue -Map $Operation.Paging -Key 'ItemsProperty')
                 $itemsSchema = $null
+                $unwrapSchema = $null
                 if ($itemsProperty -ne '') {
                     $pageSchema = Resolve-OpenApiGenSchema -Schema $media.Schema -Schemas $Document.Schemas
                     $itemsSchema = Get-OpenApiGenMapValue -Map $pageSchema.Properties -Key $itemsProperty
                 }
-                if ($null -ne $itemsSchema) {
+                elseif ($null -eq $Operation.Paging -and -not [string]::IsNullOrEmpty($UnwrapProperty)) {
+                    $wrapperSchema = Resolve-OpenApiGenSchema -Schema $media.Schema -Schemas $Document.Schemas
+                    if ($null -ne $wrapperSchema -and $wrapperSchema.Type -ne 'array') {
+                        $unwrapSchema = Get-OpenApiGenMapValue -Map $wrapperSchema.Properties -Key $UnwrapProperty
+                    }
+                }
+                if ($null -ne $unwrapSchema) {
+                    # The engine outputs the value of that property, so it carries the type name of the value
+                    $unwrap = $UnwrapProperty
+                    $refName = $unwrapSchema.RefName
+                    if ([string]::IsNullOrEmpty([string]$refName) -and $unwrapSchema.Type -eq 'array' -and $null -ne $unwrapSchema.Items) {
+                        $refName = $unwrapSchema.Items.RefName
+                    }
+                }
+                elseif ($null -ne $itemsSchema) {
                     # The engine outputs the items of a page, so they carry the type name of the items
                     $refName = $null
                     if ($null -ne $itemsSchema.Items) {
@@ -139,6 +167,9 @@ function ConvertTo-OpenApiGenMetadataEntry {
         SecuritySchemes      = $schemes
         Paging               = $Operation.Paging
         ResponseTypeName     = $responseTypeName
+    }
+    if ($null -ne $unwrap) {
+        $metadata['UnwrapProperty'] = $unwrap
     }
     return $metadata
 }

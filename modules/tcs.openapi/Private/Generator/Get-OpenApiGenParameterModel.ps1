@@ -263,7 +263,11 @@ function Get-OpenApiGenParameterModel {
     }
     $wrapper = @()
     if ($pageable) {
-        $wrapper += , @('All', 'switch', 'Follows the next-page links and returns the items of every page.')
+        $allHelp = 'Follows the next-page links and returns the items of every page.'
+        if ([string](Get-OpenApiGenMapValue -Map $Operation.Paging -Key 'Kind') -eq 'token') {
+            $allHelp = "Requests the following pages (the $(Get-OpenApiGenMapValue -Map $Operation.Paging -Key 'TokenParameter') query parameter set from each response) and returns the items of every page."
+        }
+        $wrapper += , @('All', 'switch', $allHelp)
     }
     if ($binaryResponse) {
         $wrapper += , @('OutFile', 'string', 'Saves the response content to this file and returns the file.')

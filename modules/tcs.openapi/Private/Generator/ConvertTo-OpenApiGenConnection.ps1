@@ -6,7 +6,9 @@ function ConvertTo-OpenApiGenConnection {
     .DESCRIPTION
         They call Set-/Get-/Remove-OpenApiContext with -Service fixed to the module's service. -BaseUri
         of Set-<Prefix>Context defaults to the first absolute http(s) server URL of the document (server
-        variables replaced by their defaults); without one it is mandatory.
+        variables replaced by their defaults); without one it is mandatory. The example (and the README's
+        'Getting started') passes -BaseUri only when it is mandatory, plus -AuthExample (see
+        Get-OpenApiGenAuthExample).
         Returns one { Name, RelativePath, ConnectExample, Text } per command (ConnectExample is the
         parameter text of the example, for the README).
     #>
@@ -26,6 +28,10 @@ function ConvertTo-OpenApiGenConnection {
         [AllowNull()]
         [AllowEmptyCollection()]
         [object[]]$Server,
+
+        [Parameter()]
+        [AllowEmptyString()]
+        [string]$AuthExample = " -BearerToken (Read-Host -AsSecureString -Prompt 'Token')",
 
         [Parameter(Mandatory = $true)]
         [hashtable]$Template
@@ -53,7 +59,7 @@ function ConvertTo-OpenApiGenConnection {
             '        $BaseUri = ' + (ConvertTo-OpenApiGenLiteral -Value $baseUri) + ','
         ) -join "`n"
         $baseUriHelp = "Defaults to $baseUri."
-        $connectExample = ' -BearerToken (Read-Host -AsSecureString -Prompt ''Token'')'
+        $connectExample = $AuthExample
     }
     else {
         $baseUriParameter = @(
@@ -62,7 +68,7 @@ function ConvertTo-OpenApiGenConnection {
             '        $BaseUri,'
         ) -join "`n"
         $baseUriHelp = 'The document does not name an absolute server URL, so this is required.'
-        $connectExample = ' -BaseUri ''https://api.example.com'' -BearerToken (Read-Host -AsSecureString -Prompt ''Token'')'
+        $connectExample = ' -BaseUri ''https://api.example.com''' + $AuthExample
     }
 
     $values = @{

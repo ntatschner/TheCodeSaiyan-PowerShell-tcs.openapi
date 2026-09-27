@@ -36,6 +36,8 @@ Describe 'Test-OpenApiDocument' {
             @{ Fixture = 'document-swagger-2.0.json'; Code = 'OA030' }
             @{ Fixture = 'document-openapi-3.1.json'; Code = 'OA031' }
             @{ Fixture = 'document-composition.json'; Code = 'OA050' }
+            @{ Fixture = 'document-path-templates.json'; Code = 'OA023' }
+            @{ Fixture = 'document-path-templates.json'; Code = 'OA024' }
         ) {
             $findings = @(Test-OpenApiDocument -Path (Join-Path -Path $script:fixtures -ChildPath $Fixture))
             $finding = $findings | Where-Object Code -EQ $Code | Select-Object -First 1
@@ -114,6 +116,20 @@ Describe 'Test-OpenApiDocument' {
             $summary = Test-OpenApiDocument -InputObject '{"swagger":"1.2"}' -Summary
             $summary.Errors | Should -Be 1
             $summary.IsValid | Should -BeFalse
+        }
+
+        It 'reports path parameters missing from the template (OA023) and placeholders without a parameter (OA024)' {
+            $findings = @(Test-OpenApiDocument -Path (Join-Path -Path $script:fixtures -ChildPath 'document-path-templates.json'))
+            @($findings | ForEach-Object -Process { '{0} {1} {2}' -f $_.Code, $_.Severity, $_.Operation }) | Should -Be @('OA023 Warning getItem', 'OA024 Error getOrderLine')
+            $findings[0].Message | Should -Match "'version'"
+            $findings[1].Message | Should -Match '\{lineId\}'
+        }
+
+        It 'understands the catch-all paths of the UniFi Site Manager document' {
+            $summary = Test-OpenApiDocument -Path (Join-Path -Path $script:fixtures -ChildPath 'unifi-site-manager-1.0.0.json') -Summary
+            $summary.Operations | Should -Be 14
+            $summary.IsValid | Should -BeTrue
+            @($summary.Findings | Where-Object -FilterScript { $_.Code -eq 'OA023' -or $_.Code -eq 'OA024' }).Count | Should -Be 0
         }
 
         It 'returns OA002 for missing paths' {

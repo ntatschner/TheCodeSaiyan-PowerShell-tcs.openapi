@@ -57,7 +57,7 @@ function Set-ShopContext {
         Returns the context.
 
     .EXAMPLE
-        Set-ShopContext -BaseUri 'https://api.example.com' -BearerToken (Read-Host -AsSecureString -Prompt 'Token')
+        Set-ShopContext -BaseUri 'https://api.example.com' -ClientId '<client id>' -ClientSecret (Read-Host -AsSecureString -Prompt 'Client secret')
 
     .LINK
         Set-OpenApiContext

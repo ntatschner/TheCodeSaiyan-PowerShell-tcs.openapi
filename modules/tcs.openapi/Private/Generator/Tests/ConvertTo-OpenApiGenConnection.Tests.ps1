@@ -11,11 +11,15 @@ BeforeAll {
 Describe 'ConvertTo-OpenApiGenConnection' {
     BeforeAll {
         function ConvertTo-TestConnection {
-            param([object[]]$Server)
-            InModuleScope tcs.openapi -Parameters @{ Server = $Server } {
-                param($Server)
+            param([object[]]$Server, [object]$AuthExample)
+            InModuleScope tcs.openapi -Parameters @{ Server = $Server; AuthExample = $AuthExample } {
+                param($Server, $AuthExample)
                 $templates = Get-OpenApiGenTemplate -Path (Join-Path -Path $script:TcsOpenApiModuleRoot -ChildPath 'Templates')
-                ConvertTo-OpenApiGenConnection -Prefix 'Shop' -Service 'Shop.Api' -ModuleName 'Shop.Api' -Server $Server -Template $templates
+                $arguments = @{ Prefix = 'Shop'; Service = 'Shop.Api'; ModuleName = 'Shop.Api'; Server = $Server; Template = $templates }
+                if ($null -ne $AuthExample) {
+                    $arguments['AuthExample'] = [string]$AuthExample
+                }
+                ConvertTo-OpenApiGenConnection @arguments
             }
         }
     }
@@ -61,5 +65,15 @@ Describe 'ConvertTo-OpenApiGenConnection' {
         $remove.Text | Should -Match 'Remove-OpenApiContext @tcsContext'
         $remove.Text | Should -Match 'SupportsShouldProcess'
         @(ConvertTo-TestConnection -Server @())[1].Text | Should -Match 'Get-OpenApiContext -Service \$script:TcsOpenApiService'
+    }
+
+    It 'shows the credential parameters it is given, and -BaseUri only when it is mandatory' {
+        $absolute = @([pscustomobject]@{ Url = 'https://api.example.com'; Variables = $null })
+        $set = @(ConvertTo-TestConnection -Server $absolute -AuthExample " -ApiKey (Read-Host -AsSecureString -Prompt 'API key')")[0]
+        $set.ConnectExample | Should -BeExactly " -ApiKey (Read-Host -AsSecureString -Prompt 'API key')"
+        $set.Text | Should -Match ([regex]::Escape("Set-ShopContext -ApiKey (Read-Host -AsSecureString -Prompt 'API key')"))
+        @(ConvertTo-TestConnection -Server @() -AuthExample ' -Credential (Get-Credential)')[0].ConnectExample | Should -BeExactly " -BaseUri 'https://api.example.com' -Credential (Get-Credential)"
+        @(ConvertTo-TestConnection -Server $absolute -AuthExample '')[0].ConnectExample | Should -BeExactly ''
+        @(ConvertTo-TestConnection -Server $absolute)[0].ConnectExample | Should -Match '-BearerToken'
     }
 }

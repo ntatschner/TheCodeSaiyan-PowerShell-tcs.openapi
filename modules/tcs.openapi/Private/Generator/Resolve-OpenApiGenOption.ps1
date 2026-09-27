@@ -7,7 +7,8 @@ function Resolve-OpenApiGenOption {
         Service = ModuleName. Prefix (used for the connection commands) = NounPrefix, or the PascalCase
         module name when there is no NounPrefix. ModuleVersion defaults to 0.1.0 and Author to
         'tcs.openapi', so the output never depends on the machine or user that runs the generator.
-        ModulePath = OutputPath/ModuleName.
+        ModulePath = OutputPath/ModuleName. UnwrapProperty is the response property to output instead of
+        the whole response (empty for none).
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -30,6 +31,11 @@ function Resolve-OpenApiGenOption {
         [AllowNull()]
         [AllowEmptyString()]
         [string]$Author,
+
+        [Parameter()]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$UnwrapProperty,
 
         [Parameter(Mandatory = $true)]
         [string]$GeneratorVersion
@@ -65,5 +71,6 @@ function Resolve-OpenApiGenOption {
         ModuleVersion    = $version
         Author           = $moduleAuthor
         GeneratorVersion = $GeneratorVersion
+        UnwrapProperty   = [string]$UnwrapProperty
     }
 }

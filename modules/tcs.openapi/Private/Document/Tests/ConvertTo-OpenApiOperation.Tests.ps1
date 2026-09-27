@@ -128,4 +128,75 @@ Describe 'ConvertTo-OpenApiOperation' {
             (& $Build '{"get":{"x-ms-pageable":{"nextLinkName":"nextLink"}}}').Operation.Paging.Kind | Should -Be 'nextLink'
         }
     }
+
+    Context 'path templates' {
+        BeforeAll {
+            $script:convertPath = InModuleScope tcs.openapi {
+                {
+                    param([string]$Path, [string]$PathItem)
+                    $context = Get-OpenApiNormalizationContext -Root (ConvertFrom-OpenApiJson -Text '{}') -SourceVersion '3.0.3'
+                    $item = ConvertFrom-OpenApiJson -Text $PathItem
+                    $pointer = Join-OpenApiJsonPointer -Pointer '/paths' -Segment $Path
+                    $operation = ConvertTo-OpenApiOperation -Context $context -OperationId 'op' -Method 'get' -Path $Path -Operation $item['get'] -PathItem $item -PathItemPointer $pointer
+                    [pscustomobject]@{ Operation = $operation; Findings = @($context.Findings) }
+                }
+            }
+        }
+
+        It 'turns a final catch-all segment <Segment> into {path} and flags the parameter CatchAll' -TestCases @(
+            @{ Segment = '*path' }
+            @{ Segment = '{path*}' }
+        ) {
+            InModuleScope tcs.openapi -Parameters @{ Convert = $script:convertPath; Segment = $Segment } {
+                param($Convert, $Segment)
+                $result = & $Convert "/v1/consoles/{id}/$Segment" '{"get":{"parameters":[{"name":"id","in":"path","required":true},{"name":"path","in":"path","required":true}]}}'
+                $result.Operation.Path | Should -BeExactly '/v1/consoles/{id}/{path}'
+                $result.Operation.Parameters[0].CatchAll | Should -BeFalse
+                $result.Operation.Parameters[1].CatchAll | Should -BeTrue
+                $result.Findings.Count | Should -Be 0
+            }
+        }
+
+        It 'leaves a catch-all segment without a matching path parameter alone' {
+            InModuleScope tcs.openapi -Parameters @{ Convert = $script:convertPath } {
+                param($Convert)
+                $result = & $Convert '/files/*rest' '{"get":{}}'
+                $result.Operation.Path | Should -BeExactly '/files/*rest'
+                $result.Findings.Count | Should -Be 0
+            }
+        }
+
+        It 'reports a path parameter that is not in the template as OA023 (Warning)' {
+            InModuleScope tcs.openapi -Parameters @{ Convert = $script:convertPath } {
+                param($Convert)
+                $result = & $Convert '/items/{id}' '{"get":{"parameters":[{"name":"id","in":"path"},{"name":"extra","in":"path"},{"name":"q","in":"query"}]}}'
+                $result.Findings.Count | Should -Be 1
+                $result.Findings[0].Code | Should -Be 'OA023'
+                $result.Findings[0].Severity | Should -Be 'Warning'
+                $result.Findings[0].Operation | Should -Be 'op'
+                $result.Findings[0].Pointer | Should -BeExactly '/paths/~1items~1{id}/get/parameters/1'
+                $result.Findings[0].Message | Should -Match "'extra'"
+            }
+        }
+
+        It 'reports a template placeholder without a path parameter as OA024 (Error)' {
+            InModuleScope tcs.openapi -Parameters @{ Convert = $script:convertPath } {
+                param($Convert)
+                $result = & $Convert '/items/{id}/{sub}' '{"parameters":[{"name":"id","in":"path"}],"get":{"parameters":[{"name":"sub","in":"query"}]}}'
+                $result.Findings.Count | Should -Be 1
+                $result.Findings[0].Code | Should -Be 'OA024'
+                $result.Findings[0].Severity | Should -Be 'Error'
+                $result.Findings[0].Pointer | Should -BeExactly '/paths/~1items~1{id}~1{sub}'
+                $result.Findings[0].Message | Should -Match '\{sub\}'
+            }
+        }
+
+        It 'compares placeholder and parameter names case-sensitively' {
+            InModuleScope tcs.openapi -Parameters @{ Convert = $script:convertPath } {
+                param($Convert)
+                $result = & $Convert '/items/{Id}' '{"get":{"parameters":[{"name":"id","in":"path"}]}}'
+                @($result.Findings.Code | Sort-Object) | Should -Be @('OA023', 'OA024')
+            }
+        }
+    }
 }

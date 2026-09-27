@@ -149,6 +149,22 @@ Describe 'New-OpenApiModule' {
         { New-OpenApiModule -Document ([pscustomobject]@{ Title = 'x' }) -ModuleName 'X' -OutputPath $out -ErrorAction Stop } | Should -Throw '*no Operations*'
     }
 
+    It 'stores -UnwrapProperty in the metadata of the operations whose response has that property' {
+        $wrapped = New-TestSchema -Type object -Properties ([ordered]@{ data = New-TestSchema -Type object -RefName 'Host'; traceId = New-TestSchema -Type string })
+        $plain = New-TestSchema -Type object -Properties ([ordered]@{ success = New-TestSchema -Type boolean })
+        $document = New-TestDocument -Operations @(
+            (New-TestOperation -OperationId 'getHost' -Method GET -Path '/hosts/{id}' -Parameters @((New-TestParameter -Name 'id' -In path)) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'application/json' -Schema $wrapped)))))
+            (New-TestOperation -OperationId 'ping' -Method POST -Path '/ping' -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'application/json' -Schema $plain)))))
+        )
+        $result = New-OpenApiModule -Document $document -ModuleName 'Wrap' -OutputPath $out -NounPrefix 'W' -UnwrapProperty 'data'
+        $metadata = Get-Content -LiteralPath (Join-Path -Path $result.Path -ChildPath 'OpenApi/operations.json') -Raw | ConvertFrom-Json
+        $metadata[0].OperationId | Should -Be 'getHost'
+        $metadata[0].UnwrapProperty | Should -Be 'data'
+        $metadata[0].ResponseTypeName | Should -Be 'Wrap.Host'
+        $metadata[1].PSObject.Properties.Name | Should -Not -Contain 'UnwrapProperty'
+        Get-Content -LiteralPath (Join-Path -Path $result.Path -ChildPath 'Public/Default/Get-WHost.ps1') -Raw | Should -Match "OutputType\('Wrap.Host'\)"
+    }
+
     It 'rejects an invalid module name or noun prefix' {
         { New-OpenApiModule -Document (New-TestDocument) -ModuleName '1x' -OutputPath $out } | Should -Throw
         { New-OpenApiModule -Document (New-TestDocument) -ModuleName 'X' -NounPrefix 'a-b' -OutputPath $out } | Should -Throw
@@ -159,7 +175,7 @@ Describe 'New-OpenApiModule' {
         $help.Synopsis | Should -Not -BeNullOrEmpty
         $help.Description | Should -Not -BeNullOrEmpty
         @($help.Examples.Example).Count | Should -BeGreaterThan 0
-        foreach ($name in @('Path', 'Uri', 'Document', 'ModuleName', 'OutputPath', 'NounPrefix', 'ModuleVersion', 'Author', 'Force')) {
+        foreach ($name in @('Path', 'Uri', 'Document', 'ModuleName', 'OutputPath', 'NounPrefix', 'UnwrapProperty', 'ModuleVersion', 'Author', 'Force')) {
             ($help.Parameters.Parameter | Where-Object -FilterScript { $_.Name -eq $name }).Description | Should -Not -BeNullOrEmpty -Because $name
         }
     }

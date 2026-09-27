@@ -1,0 +1,38 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Path templates", "version": "1.0.0" },
+  "servers": [{ "url": "https://api.example.com" }],
+  "paths": {
+    "/consoles/{id}/*path": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+        { "name": "path", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "get": { "operationId": "getConsolePath", "responses": { "200": { "description": "ok" } } }
+    },
+    "/files/{rest*}": {
+      "get": {
+        "operationId": "getFile",
+        "parameters": [{ "name": "rest", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/items/{itemId}": {
+      "get": {
+        "operationId": "getItem",
+        "parameters": [
+          { "name": "itemId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "version", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/orders/{orderId}/lines/{lineId}": {
+      "get": {
+        "operationId": "getOrderLine",
+        "parameters": [{ "name": "orderId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  }
+}

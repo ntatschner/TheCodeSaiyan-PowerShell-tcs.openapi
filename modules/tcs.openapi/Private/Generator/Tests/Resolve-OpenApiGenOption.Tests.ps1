@@ -17,6 +17,11 @@ Describe 'Resolve-OpenApiGenOption' {
         $option.ModuleVersion | Should -Be '0.1.0'
         $option.Author | Should -Be 'tcs.openapi'
         $option.ModulePath | Should -Be (Join-Path -Path '/out' -ChildPath 'pet-store.api')
+        $option.UnwrapProperty | Should -Be ''
+    }
+
+    It 'keeps the unwrap property' {
+        (InModuleScope tcs.openapi { Resolve-OpenApiGenOption -ModuleName 'Pets' -OutputPath '/out' -UnwrapProperty 'data' -GeneratorVersion '0.2.0' }).UnwrapProperty | Should -Be 'data'
     }
 
     It 'uses the given prefix, version and author' {

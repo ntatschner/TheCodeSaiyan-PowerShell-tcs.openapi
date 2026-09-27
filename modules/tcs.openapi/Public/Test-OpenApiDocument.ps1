@@ -15,6 +15,8 @@
       OA020  external $ref, the operation is flagged Unsupported (Error)
       OA021  unresolved or circular non-schema $ref, undefined security scheme (Error/Warning)
       OA022  circular schema (Information)
+      OA023  path parameter that is not in the path template, ignored (Warning)
+      OA024  path template placeholder without a path parameter (Error)
       OA030  unsupported security scheme (openIdConnect, oauth2 without clientCredentials...) (Warning)
       OA031  schema with several non-null types (Warning)
       OA050  oneOf/anyOf request body, passed through as -Body only (Information)

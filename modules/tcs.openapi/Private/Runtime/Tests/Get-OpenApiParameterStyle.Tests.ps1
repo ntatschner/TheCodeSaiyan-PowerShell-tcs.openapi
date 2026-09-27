@@ -26,6 +26,15 @@ Describe 'Get-OpenApiParameterStyle' {
             $header = Get-OpenApiParameterStyle -Parameter $parameters -Name 'id' -In 'header'
             $header.Style | Should -Be 'simple'
             $header.Explode | Should -BeFalse
+            $header.CatchAll | Should -BeFalse
+        }
+    }
+
+    It 'returns CatchAll; a missing flag (metadata of 0.1.x) is false' {
+        InModuleScope -ModuleName tcs.openapi {
+            $parameters = @(@{ Name = 'path'; In = 'path'; CatchAll = $true }, @{ Name = 'id'; In = 'path' })
+            (Get-OpenApiParameterStyle -Parameter $parameters -Name 'path' -In 'path').CatchAll | Should -BeTrue
+            (Get-OpenApiParameterStyle -Parameter $parameters -Name 'id' -In 'path').CatchAll | Should -BeFalse
         }
     }
 
