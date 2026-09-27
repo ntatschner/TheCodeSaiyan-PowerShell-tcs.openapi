@@ -1,0 +1,60 @@
+BeforeAll {
+    $env:TCS_CONFIG_ROOT = Join-Path -Path $TestDrive -ChildPath 'config'
+    $env:TCS_SKIP_UPDATE_CHECK = '1'
+    $env:TCS_TELEMETRY_OPTOUT = '1'
+    $ModuleRoot = Split-Path -Path $PSScriptRoot -Parent | Split-Path -Parent
+    Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'tcs.openapi.psd1') -Force
+    # Windows PowerShell 5.1 does not load System.Net.Http by default
+    Add-Type -AssemblyName 'System.Net.Http'
+    $RepoRoot = Split-Path -Path (Split-Path -Path $ModuleRoot -Parent) -Parent
+    . (Join-Path -Path $RepoRoot -ChildPath 'tests/Helpers/TestHttpServer.ps1')
+    $script:server = Start-TestHttpServer -Handler { param($Request) @{ Body = @{ method = $Request.Method; path = $Request.Path } } }
+    Set-OpenApiContext -Service 'Direct' -BaseUri $script:server.BaseUri
+}
+
+AfterAll {
+    $script:server.Stop()
+    Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-OpenApiRequest' {
+    BeforeEach {
+        $script:server.Requests.Clear()
+    }
+
+    It 'accepts the operation metadata as a hashtable or a PSCustomObject' {
+        $hashtable = @{ OperationId = 'a'; Method = 'get'; Path = '/h/{id}'; Parameters = @(@{ Name = 'id'; In = 'path' }); Security = @() }
+        (Invoke-OpenApiRequest -Service 'Direct' -Operation $hashtable -PathParameters @{ id = 1 }).path | Should -Be '/h/1'
+        $json = '{"OperationId":"b","Method":"DELETE","Path":"/o/{id}","Parameters":[{"Name":"id","In":"path","Style":null,"Explode":null,"AllowReserved":false}],"Security":[],"SecuritySchemes":{},"Paging":null,"ResponseTypeName":"Direct.Thing","PSTypeName":"Tcs.OpenApi.OperationMetadata"}'
+        $object = $json | ConvertFrom-Json
+        $result = Invoke-OpenApiRequest -Service 'Direct' -Operation $object -PathParameters @{ id = 'x' }
+        $result.method | Should -Be 'DELETE'
+        $result.path | Should -Be '/o/x'
+        $result.PSObject.TypeNames[0] | Should -Be 'Direct.Thing'
+    }
+
+    It 'defaults to GET and sends a User-Agent and Accept header' {
+        $null = Invoke-OpenApiRequest -Service 'Direct' -Operation @{ Path = '/x' }
+        $script:server.Requests[0].Method | Should -Be 'GET'
+        $script:server.Requests[0].Headers['User-Agent'] | Should -Match '^tcs\.openapi/'
+        $script:server.Requests[0].Headers['Accept'] | Should -Match 'application/json'
+    }
+
+    It 'sends the operation response content types as Accept' {
+        $null = Invoke-OpenApiRequest -Service 'Direct' -Operation @{ Path = '/x'; ResponseContentTypes = @('application/xml', 'text/csv') }
+        $script:server.Requests[0].Headers['Accept'] | Should -Be 'application/xml, text/csv'
+    }
+
+    It 'writes an error when no service name is known' {
+        { Invoke-OpenApiRequest -Operation @{ Path = '/x' } -ErrorAction Stop } | Should -Throw -ErrorId 'OpenApi.MissingService*'
+    }
+
+    It 'has comment-based help for every parameter' {
+        $help = Get-Help -Name Invoke-OpenApiRequest -Full
+        $help.Synopsis | Should -Not -BeNullOrEmpty
+        @($help.Examples.Example).Count | Should -BeGreaterThan 0
+        foreach ($name in 'Service', 'Operation', 'PathParameters', 'QueryParameters', 'HeaderParameters', 'CookieParameters', 'Body', 'ContentType', 'OutFile', 'All', 'Raw', 'Cmdlet') {
+            ($help.Parameters.Parameter | Where-Object -FilterScript { $_.Name -eq $name }).Description | Should -Not -BeNullOrEmpty
+        }
+    }
+}
