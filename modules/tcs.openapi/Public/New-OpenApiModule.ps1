@@ -21,7 +21,8 @@
 
     Existing generated files are replaced only with -Force; Overrides.ps1 is never replaced. The same
     document and options always give byte-identical files. Problems found in the document and by the
-    generator (renamed commands OA040, renamed parameters OA041, skipped operations OA070) are
+    generator (renamed commands OA040, commands renamed so they do not shadow a core PowerShell
+    command OA042, renamed parameters OA041, skipped operations OA070) are
     returned in Findings.
 
 .PARAMETER Path
@@ -45,6 +46,11 @@
     A prefix for every command noun: with 'PetStore', operation getOrder becomes Get-PetStoreOrder.
     The connection commands are Set-/Get-/Remove-<NounPrefix>Context. Without it, the connection commands
     use the PascalCase module name.
+
+    Set it. There is no default prefix, so without one the nouns come straight from the document
+    (getItem -> Get-Item) and easily clash with other modules. A name that would shadow a core
+    PowerShell command (Get-Item, New-Item, Get-Content, ...) is never generated: it gets the PascalCase
+    module name as its prefix instead (Get-<ModuleName>Item) and an OA042 warning finding.
 
 .PARAMETER ModuleVersion
     The version of the generated module. Defaults to 0.1.0.

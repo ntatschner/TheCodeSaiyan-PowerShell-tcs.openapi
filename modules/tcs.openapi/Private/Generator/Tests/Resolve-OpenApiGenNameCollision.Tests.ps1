@@ -15,10 +15,10 @@ Describe 'Resolve-OpenApiGenNameCollision' {
             [pscustomobject]@{ OperationId = $OperationId; Method = $Method; Path = $Path; Verb = $Verb; Noun = $Noun; BaseNoun = $Noun; Name = "$Verb-$Noun"; Source = 'operationId'; IsList = $false; Findings = @() }
         }
         function Resolve-Test {
-            param([object[]]$Candidate, [string[]]$Reserved = @())
-            InModuleScope tcs.openapi -Parameters @{ Candidate = $Candidate; Reserved = $Reserved } {
-                param($Candidate, $Reserved)
-                Resolve-OpenApiGenNameCollision -Candidate $Candidate -Reserved $Reserved
+            param([object[]]$Candidate, [string[]]$Reserved = @(), [string[]]$BuiltIn = @(), [string]$BuiltInPrefix = '')
+            InModuleScope tcs.openapi -Parameters @{ Candidate = $Candidate; Reserved = $Reserved; BuiltIn = $BuiltIn; BuiltInPrefix = $BuiltInPrefix } {
+                param($Candidate, $Reserved, $BuiltIn, $BuiltInPrefix)
+                Resolve-OpenApiGenNameCollision -Candidate $Candidate -Reserved $Reserved -BuiltIn $BuiltIn -BuiltInPrefix $BuiltInPrefix
             }
         }
     }
@@ -93,5 +93,34 @@ Describe 'Resolve-OpenApiGenNameCollision' {
         $candidates = @((New-Candidate 'a' 'GET' '/x/{id}' 'Get' 'X'), (New-Candidate 'b' 'GET' '/x/{name}' 'Get' 'X'))
         (Resolve-Test -Candidate $candidates).Names.Name | Should -Be (Resolve-Test -Candidate $candidates).Names.Name
         (Resolve-Test -Candidate $candidates).Names[1].Name | Should -Be 'Get-XByName'
+    }
+
+    It 'renames a candidate that would shadow a built-in command, with the prefix first and OA042' {
+        $result = Resolve-Test -Candidate @(
+            (New-Candidate 'listItems' 'GET' '/items' 'Get' 'Item'),
+            (New-Candidate 'createItem' 'POST' '/items' 'New' 'Item'),
+            (New-Candidate 'getPet' 'GET' '/pets' 'Get' 'Pet')
+        ) -BuiltIn @('get-item', 'New-Item') -BuiltInPrefix 'Modern'
+        $result.Names.Name | Should -Be @('Get-ModernItem', 'New-ModernItem', 'Get-Pet')
+        $result.Names.Renamed | Should -Be @($true, $true, $false)
+        @($result.Findings.Code) | Should -Be @('OA042', 'OA042')
+        $result.Findings[0].Severity | Should -Be 'Warning'
+        $result.Findings[0].Operation | Should -Be 'listItems'
+        $result.Findings[0].Message | Should -Match 'built-in PowerShell command'
+        $result.Findings[0].Message | Should -Match 'NounPrefix'
+    }
+
+    It 'falls back to the collision rules for a built-in name when there is no prefix or it is taken' {
+        $result = Resolve-Test -Candidate @((New-Candidate 'listItems' 'GET' '/items' 'Get' 'Item')) -BuiltIn @('Get-Item')
+        $result.Names[0].Name | Should -Be 'Get-ItemItem'
+        $result.Findings[0].Code | Should -Be 'OA042'
+        $taken = Resolve-Test -Candidate @((New-Candidate 'listItems' 'GET' '/items' 'Get' 'Item')) -BuiltIn @('Get-Item') -BuiltInPrefix 'Modern' -Reserved @('Get-ModernItem')
+        $taken.Names[0].Name | Should -Be 'Get-ItemItem'
+    }
+
+    It 'does not add the prefix twice' {
+        $result = Resolve-Test -Candidate @((New-Candidate 'a' 'GET' '/x' 'Get' 'Item')) -BuiltIn @('Get-Item') -BuiltInPrefix 'item'
+        $result.Names[0].Name | Should -Not -Be 'Get-itemItem'
+        $result.Findings[0].Code | Should -Be 'OA042'
     }
 }

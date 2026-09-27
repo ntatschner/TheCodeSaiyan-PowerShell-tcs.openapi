@@ -142,4 +142,21 @@ Describe 'New-OpenApiGenPlan' {
         ($empty.Files | Where-Object -FilterScript { $_.RelativePath -eq 'OpenApi/operations.json' }).Content | Should -Be "[]`n"
         $empty.Functions.Count | Should -Be 3
     }
+
+    It 'never shadows a core PowerShell command when there is no noun prefix (OA042)' {
+        $document = New-TestDocument -Operations @(
+            (New-TestOperation -OperationId 'listItems' -Method GET -Path '/items'),
+            (New-TestOperation -OperationId 'createItem' -Method POST -Path '/items'),
+            (New-TestOperation -OperationId 'getWidget' -Method GET -Path '/widgets')
+        )
+        $noPrefix = New-TestPlan -Document $document -ModuleName 'Modern' -NounPrefix ''
+        @($noPrefix.Functions.Name) | Should -Contain 'Get-ModernItem'
+        @($noPrefix.Functions.Name) | Should -Contain 'New-ModernItem'
+        @($noPrefix.Functions.Name) | Should -Contain 'Get-Widget'
+        @($noPrefix.Functions.Name) | Should -Not -Contain 'Get-Item'
+        @($noPrefix.Findings | Where-Object -FilterScript { $_.Code -eq 'OA042' }).Count | Should -Be 2
+        $prefixed = New-TestPlan -Document $document -ModuleName 'Modern' -NounPrefix 'Md'
+        @($prefixed.Functions.Name) | Should -Contain 'Get-MdItem'
+        @($prefixed.Findings | Where-Object -FilterScript { $_.Code -eq 'OA042' }).Count | Should -Be 0
+    }
 }

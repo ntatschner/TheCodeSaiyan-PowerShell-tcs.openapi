@@ -85,7 +85,7 @@ function New-OpenApiGenPlan {
             }
             $candidate
         })
-    $resolved = Resolve-OpenApiGenNameCollision -Candidate $candidates -Reserved $reservedNames
+    $resolved = Resolve-OpenApiGenNameCollision -Candidate $candidates -Reserved $reservedNames -BuiltIn (Get-OpenApiGenBuiltInCommandName) -BuiltInPrefix $Option.Prefix
     foreach ($finding in $resolved.Findings) {
         [void]$findings.Add($finding)
     }

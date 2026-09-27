@@ -1,0 +1,193 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "End-to-end API",
+    "version": "2.0.0",
+    "description": "Used by tests/EndToEnd.*.Tests.ps1: every auth kind, query styles, body kinds, both paging kinds, downloads, retry and errors."
+  },
+  "servers": [ { "url": "https://e2e.example.com/api" } ],
+  "security": [ { "bearer": [] } ],
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "summary": "List items",
+        "tags": ["items"],
+        "parameters": [
+          { "name": "tags", "in": "query", "schema": { "type": "array", "items": { "type": "string" } } },
+          { "name": "ids", "in": "query", "explode": false, "schema": { "type": "array", "items": { "type": "integer" } } },
+          { "name": "codes", "in": "query", "style": "pipeDelimited", "explode": false, "schema": { "type": "array", "items": { "type": "string" } } },
+          { "name": "filter", "in": "query", "style": "deepObject", "explode": true, "schema": { "type": "object", "properties": { "color": { "type": "string" }, "size": { "type": "integer" } } } },
+          { "name": "includeArchived", "in": "query", "schema": { "type": "boolean" } },
+          { "name": "since", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "X-Request-Id", "in": "header", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "A page of items", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemPage" } } } }
+        }
+      },
+      "post": {
+        "operationId": "createItem",
+        "summary": "Create an item",
+        "tags": ["items"],
+        "security": [ { "apiKeyHeader": [] } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }
+        }
+      }
+    },
+    "/items/{itemId}": {
+      "parameters": [ { "name": "itemId", "in": "path", "required": true, "schema": { "type": "string" } } ],
+      "get": {
+        "operationId": "getItem",
+        "summary": "Get one item",
+        "tags": ["items"],
+        "security": [],
+        "responses": {
+          "200": { "description": "The item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "Not found", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+        }
+      },
+      "delete": {
+        "operationId": "deleteItem",
+        "summary": "Delete an item",
+        "tags": ["items"],
+        "security": [],
+        "responses": { "204": { "description": "Deleted" } }
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "listEvents",
+        "summary": "List events, paged with a Link header",
+        "tags": ["events"],
+        "security": [ { "apiKeyQuery": [] } ],
+        "parameters": [ { "name": "strict", "in": "query", "required": true, "schema": { "type": "boolean" } } ],
+        "responses": {
+          "200": {
+            "description": "Events",
+            "headers": { "Link": { "schema": { "type": "string" } } },
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Event" } } } }
+          }
+        }
+      }
+    },
+    "/forms": {
+      "post": {
+        "operationId": "submitForm",
+        "summary": "Submit a form",
+        "tags": ["forms"],
+        "security": [ { "basic": [] } ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": { "type": "object", "properties": { "name": { "type": "string" }, "count": { "type": "integer" } } }
+            }
+          }
+        },
+        "responses": { "204": { "description": "Accepted" } }
+      }
+    },
+    "/uploads": {
+      "post": {
+        "operationId": "uploadFile",
+        "summary": "Upload a file",
+        "tags": ["files"],
+        "security": [ { "apiKeyCookie": [] } ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": { "type": "object", "properties": { "description": { "type": "string" }, "file": { "type": "string", "format": "binary" } } }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Stored", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Upload" } } } } }
+      }
+    },
+    "/blobs/{blobId}": {
+      "parameters": [ { "name": "blobId", "in": "path", "required": true, "schema": { "type": "string" } } ],
+      "get": {
+        "operationId": "getBlob",
+        "summary": "Download a blob",
+        "tags": ["files"],
+        "security": [],
+        "responses": { "200": { "description": "The bytes", "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } } } }
+      },
+      "put": {
+        "operationId": "putBlob",
+        "summary": "Upload a blob",
+        "tags": ["files"],
+        "security": [ { "oauth": ["blobs:write"] } ],
+        "requestBody": { "required": true, "content": { "application/octet-stream": { "schema": { "type": "string", "format": "binary" } } } },
+        "responses": { "204": { "description": "Stored" } }
+      }
+    },
+    "/limited": {
+      "get": {
+        "operationId": "getLimited",
+        "summary": "A rate-limited resource",
+        "tags": ["misc"],
+        "security": [],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } } } } } } }
+      }
+    },
+    "/legacy": {
+      "get": {
+        "operationId": "getLegacy",
+        "summary": "An old resource",
+        "tags": ["misc"],
+        "deprecated": true,
+        "security": [],
+        "responses": { "200": { "description": "OK", "content": { "text/plain": { "schema": { "type": "string" } } } } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer" },
+      "basic": { "type": "http", "scheme": "basic" },
+      "apiKeyHeader": { "type": "apiKey", "in": "header", "name": "X-API-Key" },
+      "apiKeyQuery": { "type": "apiKey", "in": "query", "name": "api_key" },
+      "apiKeyCookie": { "type": "apiKey", "in": "cookie", "name": "sid" },
+      "oauth": {
+        "type": "oauth2",
+        "flows": { "clientCredentials": { "tokenUrl": "https://e2e.example.com/token", "scopes": { "blobs:write": "Write blobs" } } }
+      }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "id": { "type": "string", "readOnly": true },
+          "name": { "type": "string" },
+          "price": { "type": "number" },
+          "active": { "type": "boolean" },
+          "category": { "$ref": "#/components/schemas/Category" },
+          "labels": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": { "id": { "type": "integer" }, "parent": { "$ref": "#/components/schemas/Category" } }
+      },
+      "ItemPage": {
+        "type": "object",
+        "properties": {
+          "value": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } },
+          "nextLink": { "type": "string" }
+        }
+      },
+      "Event": { "type": "object", "properties": { "id": { "type": "integer" }, "kind": { "type": "string" } } },
+      "Upload": { "type": "object", "properties": { "id": { "type": "string" }, "size": { "type": "integer" } } },
+      "Problem": {
+        "type": "object",
+        "properties": { "type": { "type": "string" }, "title": { "type": "string" }, "status": { "type": "integer" }, "detail": { "type": "string" } }
+      }
+    }
+  }
+}

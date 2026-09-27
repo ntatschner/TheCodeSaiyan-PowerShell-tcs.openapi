@@ -10,8 +10,13 @@ function Resolve-OpenApiGenNameCollision {
         order of preference: a path segment that the first holder's path does not have ('{name}' ->
         'ByName', 'owners' -> 'Owner'), all such segments, the HTTP method ('Post'), and as a last
         resort a number (2, 3, ...). Names in -Reserved (for example the connection commands) are
-        treated as taken. Comparisons ignore case. Returns { Names, Findings }, where Names are the
-        candidates in the same order with Name, Noun and Renamed set.
+        treated as taken. Comparisons ignore case.
+        A name in -BuiltIn (the core PowerShell commands, Get-OpenApiGenBuiltInCommandName) is never
+        used, so a generated module cannot shadow Get-Item or New-Item: such a candidate is renamed by
+        the same rules, except that -BuiltInPrefix (the connection prefix) is tried first
+        ('Get-Item' -> 'Get-ModernItem'), and the rename is an OA042 warning instead of OA040.
+        Returns { Names, Findings }, where Names are the candidates in the same order with Name, Noun
+        and Renamed set.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -22,7 +27,15 @@ function Resolve-OpenApiGenNameCollision {
 
         [Parameter()]
         [AllowEmptyCollection()]
-        [string[]]$Reserved = @()
+        [string[]]$Reserved = @(),
+
+        [Parameter()]
+        [AllowEmptyCollection()]
+        [string[]]$BuiltIn = @(),
+
+        [Parameter()]
+        [AllowEmptyString()]
+        [string]$BuiltInPrefix = ''
     )
 
     $comparer = [System.StringComparer]::OrdinalIgnoreCase
@@ -31,6 +44,11 @@ function Resolve-OpenApiGenNameCollision {
     foreach ($name in $Reserved) {
         [void]$taken.Add($name)
         [void]$reservedSet.Add($name)
+    }
+    $builtInSet = New-Object -TypeName 'System.Collections.Generic.HashSet[string]' -ArgumentList $comparer
+    foreach ($name in $BuiltIn) {
+        [void]$taken.Add($name)
+        [void]$builtInSet.Add($name)
     }
     foreach ($item in $Candidate) {
         [void]$taken.Add($item.Name)
@@ -61,7 +79,8 @@ function Resolve-OpenApiGenNameCollision {
     }
 
     foreach ($item in $Candidate) {
-        $isFree = (-not $holders.ContainsKey($item.Name)) -and (-not $reservedSet.Contains($item.Name))
+        $isBuiltIn = $builtInSet.Contains($item.Name)
+        $isFree = (-not $holders.ContainsKey($item.Name)) -and (-not $reservedSet.Contains($item.Name)) -and (-not $isBuiltIn)
         if ($isFree) {
             $holders[$item.Name] = $item
             [void]$names.Add(($item | Select-Object -Property * -ExcludeProperty Findings | Add-Member -NotePropertyName Renamed -NotePropertyValue $false -PassThru))
@@ -81,6 +100,9 @@ function Resolve-OpenApiGenNameCollision {
         [array]::Reverse($distinct)
 
         $options = New-Object -TypeName System.Collections.ArrayList
+        if ($isBuiltIn -and $BuiltInPrefix -ne '' -and -not $item.Noun.StartsWith($BuiltInPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            [void]$options.Add($BuiltInPrefix + $item.Noun)
+        }
         foreach ($segment in $distinct) {
             [void]$options.Add((& $joinNoun $item.Noun @(& $segmentWords $segment)))
         }
@@ -116,7 +138,12 @@ function Resolve-OpenApiGenNameCollision {
             $other = "operation '$($holder.OperationId)' ($($holder.Method) $($holder.Path))"
         }
         $operation = [pscustomobject]@{ OperationId = $item.OperationId; Method = $item.Method; Path = $item.Path }
-        [void]$findings.Add((New-OpenApiGenFinding -Severity Warning -Code 'OA040' -Operation $operation -Message "Command name '$($item.Name)' for operation '$($item.OperationId)' collides with $other; renamed to '$newName'."))
+        if ($isBuiltIn) {
+            [void]$findings.Add((New-OpenApiGenFinding -Severity Warning -Code 'OA042' -Operation $operation -Message "Command name '$($item.Name)' for operation '$($item.OperationId)' would shadow the built-in PowerShell command of the same name; renamed to '$newName'. Use -NounPrefix (or x-ps-name) to choose the names."))
+        }
+        else {
+            [void]$findings.Add((New-OpenApiGenFinding -Severity Warning -Code 'OA040' -Operation $operation -Message "Command name '$($item.Name)' for operation '$($item.OperationId)' collides with $other; renamed to '$newName'."))
+        }
 
         $renamed = $item | Select-Object -Property * -ExcludeProperty Findings
         $renamed.Noun = $newNoun
