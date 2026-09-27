@@ -1,0 +1,60 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Features of 3.1", "version": "2024-01-01" },
+  "servers": [ { "url": "https://api.example.com" } ],
+  "paths": {
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "x-ms-pageable": { "nextLinkName": "@odata.nextLink", "itemName": "items" },
+        "responses": {
+          "200": { "description": "Items", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemPage" } } } }
+        }
+      },
+      "post": {
+        "operationId": "createItem",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/items/all": {
+      "get": {
+        "operationId": "listAllItems",
+        "x-ms-pageable": { "nextLinkName": null },
+        "responses": { "200": { "description": "All items in one page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemPage" } } } } }
+      }
+    }
+  },
+  "webhooks": {
+    "newItem": { "post": { "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }, "responses": { "200": { "description": "ok" } } } }
+  },
+  "components": {
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "const": "fixed-id" },
+          "note": { "type": ["string", "null"], "description": "Optional note" },
+          "value": { "type": ["string", "integer"] },
+          "nothing": { "type": "null" },
+          "sample": { "type": "string", "examples": ["first", "second"] },
+          "free": true
+        }
+      },
+      "ItemPage": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } },
+          "@odata.nextLink": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oidc": { "type": "openIdConnect", "openIdConnectUrl": "https://auth.example.com/.well-known/openid-configuration" },
+      "code": { "type": "oauth2", "flows": { "authorizationCode": { "authorizationUrl": "https://auth.example.com/authorize", "tokenUrl": "https://auth.example.com/token", "scopes": {} } } },
+      "mtls": { "type": "mutualTLS" },
+      "digest": { "type": "http", "scheme": "digest" }
+    }
+  }
+}

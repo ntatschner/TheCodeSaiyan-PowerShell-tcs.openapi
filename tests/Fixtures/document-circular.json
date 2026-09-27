@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Circular schemas", "version": "1.0.0" },
+  "paths": {
+    "/nodes": {
+      "get": {
+        "operationId": "getTree",
+        "responses": { "200": { "description": "A tree", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Node" } } } } }
+      },
+      "post": {
+        "operationId": "createPerson",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Person" } } } },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Node": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "children": { "type": "array", "items": { "$ref": "#/components/schemas/Node" } },
+          "parent": { "$ref": "#/components/schemas/Node" }
+        }
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "employer": { "$ref": "#/components/schemas/Company" }
+        }
+      },
+      "Company": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "employees": { "type": "array", "items": { "$ref": "#/components/schemas/Person" } }
+        }
+      },
+      "Alias": { "$ref": "#/components/schemas/Node" }
+    }
+  }
+}
