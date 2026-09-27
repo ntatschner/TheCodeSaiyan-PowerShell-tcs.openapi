@@ -157,7 +157,9 @@ function Set-OpenApiContext {
         [switch]$PassThru
     )
 
-    Invoke-TcsCommand -ScriptBlock {
+    $telemetry = Start-TcsTelemetry
+    $failure = $null
+    try {
         if (-not $BaseUri.IsAbsoluteUri -or ($BaseUri.Scheme -ne 'http' -and $BaseUri.Scheme -ne 'https')) {
             throw (New-Object System.ArgumentException -ArgumentList "The base URI '$BaseUri' must be an absolute http or https URL.", 'BaseUri')
         }
@@ -209,5 +211,12 @@ function Set-OpenApiContext {
                 ConvertTo-OpenApiContextView -Context $context
             }
         }
+    }
+    catch {
+        $failure = $_
+        throw
+    }
+    finally {
+        Complete-TcsTelemetry -Token $telemetry -ErrorRecord $failure
     }
 }

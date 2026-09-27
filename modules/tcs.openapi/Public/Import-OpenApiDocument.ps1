@@ -86,11 +86,13 @@ function Import-OpenApiDocument {
 
     begin {
         $telemetry = Start-TcsTelemetry
+        $lastError = $null
     }
 
     process {
         $parameterSet = $PSCmdlet.ParameterSetName
-        Invoke-TcsCommand -Token $telemetry -ScriptBlock {
+        $completed = $false
+        try {
             $readArguments = @{}
             $readArguments[$parameterSet] = Get-Variable -Name $parameterSet -ValueOnly
             $source = Get-OpenApiDocumentText @readArguments
@@ -102,16 +104,29 @@ function Import-OpenApiDocument {
             if ($null -ne $versionFinding) {
                 $exception = New-Object -TypeName System.NotSupportedException -ArgumentList "$($source.Source): $($versionFinding.Message)"
                 $record = New-Object -TypeName System.Management.Automation.ErrorRecord -ArgumentList $exception, 'OpenApi.UnsupportedVersion', ([System.Management.Automation.ErrorCategory]::InvalidData), $source.Source
+                # ThrowTerminatingError skips the catch block below; only finally runs
+                $lastError = $record
                 $PSCmdlet.ThrowTerminatingError($record)
             }
             foreach ($finding in $model.Findings) {
                 Write-Verbose "$($finding.Severity) $($finding.Code) $($finding.Pointer): $($finding.Message)"
             }
             $model
+            $completed = $true
+        }
+        catch {
+            $lastError = $_
+            throw
+        }
+        finally {
+            # end does not run when a later command stops the pipeline (Select-Object -First)
+            if (-not $completed) {
+                Complete-TcsTelemetry -Token $telemetry -ErrorRecord $lastError
+            }
         }
     }
 
     end {
-        Complete-TcsTelemetry -Token $telemetry
+        Complete-TcsTelemetry -Token $telemetry -ErrorRecord $lastError
     }
 }
