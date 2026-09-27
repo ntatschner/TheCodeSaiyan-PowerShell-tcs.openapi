@@ -25,14 +25,14 @@ function ConvertTo-OpenApiSecurityRequirement {
     if ($Context.Root['components'] -is [System.Collections.IDictionary]) {
         $defined = $Context.Root['components']['securitySchemes']
     }
-    $list = New-Object -TypeName System.Collections.Generic.List[object]
+    $list = [System.Collections.Generic.List[object]]::new()
     if ($Requirement -is [System.Collections.IList]) {
         $index = 0
         foreach ($item in $Requirement) {
             $map = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
             if ($item -is [System.Collections.IDictionary]) {
                 foreach ($name in @($item.Keys)) {
-                    $scopes = New-Object -TypeName System.Collections.Generic.List[string]
+                    $scopes = [System.Collections.Generic.List[string]]::new()
                     foreach ($scope in @($item[$name])) {
                         if ($null -ne $scope) {
                             $scopes.Add([string]$scope)

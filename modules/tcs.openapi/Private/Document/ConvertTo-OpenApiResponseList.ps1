@@ -21,7 +21,7 @@ function ConvertTo-OpenApiResponseList {
         [string]$Pointer
     )
 
-    $list = New-Object -TypeName System.Collections.Generic.List[object]
+    $list = [System.Collections.Generic.List[object]]::new()
     if ($Responses -isnot [System.Collections.IDictionary]) {
         return , $list.ToArray()
     }

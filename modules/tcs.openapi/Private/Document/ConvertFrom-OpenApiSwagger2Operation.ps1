@@ -79,9 +79,9 @@ function ConvertFrom-OpenApiSwagger2Operation {
         }
     }
 
-    $parameters = New-Object -TypeName System.Collections.Generic.List[object]
+    $parameters = [System.Collections.Generic.List[object]]::new()
     $body = $null
-    $formData = New-Object -TypeName System.Collections.Generic.List[object]
+    $formData = [System.Collections.Generic.List[object]]::new()
     foreach ($parameter in $merged.Values) {
         if ($parameter.Contains('$ref')) {
             $parameters.Add($parameter)
@@ -131,7 +131,7 @@ function ConvertFrom-OpenApiSwagger2Operation {
             $contentType = 'multipart/form-data'
         }
         $properties = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
-        $required = New-Object -TypeName System.Collections.Generic.List[string]
+        $required = [System.Collections.Generic.List[string]]::new()
         foreach ($parameter in $formData) {
             $property = ConvertFrom-OpenApiSwagger2SimpleSchema -Node $parameter
             if ($parameter.Contains('description')) {

@@ -96,7 +96,7 @@ function ConvertTo-OpenApiDocumentModel {
 
     # Pass 1: list operations and settle their operationIds
     $methods = @('get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace')
-    $entries = New-Object -TypeName System.Collections.Generic.List[object]
+    $entries = [System.Collections.Generic.List[object]]::new()
     foreach ($path in @($paths.Keys)) {
         $pathItemPointer = Join-OpenApiJsonPointer -Pointer '/paths' -Segment $path
         $resolvedItem = Resolve-OpenApiComponentReference -Context $context -Node $paths[$path] -Pointer $pathItemPointer
@@ -120,7 +120,7 @@ function ConvertTo-OpenApiDocumentModel {
                 })
         }
     }
-    $used = New-Object -TypeName System.Collections.Generic.HashSet[string] -ArgumentList ([System.StringComparer]::OrdinalIgnoreCase)
+    $used = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($entry in $entries) {
         if ($null -eq $entry.SpecId) {
             continue
@@ -152,7 +152,7 @@ function ConvertTo-OpenApiDocumentModel {
     }
 
     # Pass 2: build the operations
-    $operations = New-Object -TypeName System.Collections.Generic.List[object]
+    $operations = [System.Collections.Generic.List[object]]::new()
     foreach ($entry in $entries) {
         $operations.Add((ConvertTo-OpenApiOperation -Context $context -OperationId $entry.OperationId -Method $entry.Method -Path $entry.Path -Operation $entry.Operation -PathItem $entry.PathItem -PathItemPointer $entry.PathItemPointer))
     }

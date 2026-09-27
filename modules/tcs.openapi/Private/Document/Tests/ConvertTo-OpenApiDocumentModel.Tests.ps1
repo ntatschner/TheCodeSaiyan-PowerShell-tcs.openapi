@@ -32,6 +32,17 @@ Describe 'ConvertTo-OpenApiDocumentModel' {
             $back.Schemas.Pet.Properties.category.RefName | Should -Be 'Category'
         }
 
+        It 'uses full schemas at operations and reference stubs inside named schemas' {
+            $model = & $script:load (Join-Path -Path $script:fixtures -ChildPath 'document-petstore-3.0.json')
+            $body = $model.Operations[1].RequestBody.Content[0].Schema
+            [object]::ReferenceEquals($body, $model.Schemas['Pet']) | Should -BeTrue
+            $body.Properties['category'].RefName | Should -Be 'Category'
+            $body.Properties['category'].Type | Should -Be 'object'
+            $body.Properties['category'].Properties | Should -BeNullOrEmpty
+            $model.Schemas['Category'].Properties.Count | Should -Be 2
+            $model.Schemas['PetList'].Properties['value'].Items.RefName | Should -Be 'Pet'
+        }
+
         It 'serialises circular schemas without recursing forever' {
             $model = & $script:load (Join-Path -Path $script:fixtures -ChildPath 'document-circular.json')
             { $model | ConvertTo-Json -Depth 100 -Compress } | Should -Not -Throw
@@ -231,12 +242,18 @@ Describe 'ConvertTo-OpenApiDocumentModel' {
             $model = & $script:load (Join-Path -Path $script:fixtures -ChildPath 'document-circular.json')
             $model.Schemas['Node'].Properties['children'].Items.Recursive | Should -BeTrue
             $model.Schemas['Node'].Properties['parent'].Recursive | Should -BeTrue
-            $model.Schemas['Person'].Properties['employer'].Properties['employees'].Items.Recursive | Should -BeTrue
+            $model.Schemas['Person'].Properties['employer'].RefName | Should -Be 'Company'
+            $model.Schemas['Person'].Properties['employer'].Recursive | Should -BeFalse
+            $model.Schemas['Person'].Properties['employer'].Properties | Should -BeNullOrEmpty
+            $model.Schemas['Company'].Properties['employees'].Items.RefName | Should -Be 'Person'
+            $model.Schemas['Company'].Properties['employees'].Items.Recursive | Should -BeTrue
             $model.Schemas['Alias'].RefName | Should -Be 'Alias'
+            @($model.Schemas['Alias'].Properties.Keys) | Should -Be @('name', 'children', 'parent')
             $model.Schemas['Node'].RefName | Should -Be 'Node'
             @($model.Findings | Where-Object Code -EQ 'OA022').Count | Should -Be 2
             @($model.Findings | Where-Object Severity -NE 'Information').Count | Should -Be 0
             $model.Operations[0].Responses[0].Content[0].Schema.RefName | Should -Be 'Node'
+            $model.Operations[1].RequestBody.Content[0].Schema.Properties['employer'].RefName | Should -Be 'Company'
         }
     }
 

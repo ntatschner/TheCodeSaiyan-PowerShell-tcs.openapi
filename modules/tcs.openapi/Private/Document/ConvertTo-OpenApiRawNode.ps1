@@ -30,7 +30,7 @@ function ConvertTo-OpenApiRawNode {
                 return $map
             }
             'Array' {
-                $list = New-Object -TypeName System.Collections.Generic.List[object]
+                $list = [System.Collections.Generic.List[object]]::new()
                 foreach ($element in $InputObject.EnumerateArray()) {
                     $list.Add((ConvertTo-OpenApiRawNode -InputObject $element))
                 }
@@ -85,7 +85,7 @@ function ConvertTo-OpenApiRawNode {
     }
 
     if ($InputObject -is [System.Collections.IEnumerable]) {
-        $list = New-Object -TypeName System.Collections.Generic.List[object]
+        $list = [System.Collections.Generic.List[object]]::new()
         foreach ($element in $InputObject) {
             $list.Add((ConvertTo-OpenApiRawNode -InputObject $element))
         }

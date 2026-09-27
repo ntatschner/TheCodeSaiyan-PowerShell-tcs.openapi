@@ -37,11 +37,27 @@ function Get-OpenApiPaging {
         }
     }
 
-    $success = @($Responses | Where-Object { $_.StatusCode -eq '200' }) + @($Responses | Where-Object { $_.StatusCode -match '^2' -and $_.StatusCode -ne '200' })
+    # Success responses, 200 first (foreach loops rather than pipelines: this runs for every operation)
+    $success = [System.Collections.Generic.List[object]]::new()
+    foreach ($response in $Responses) {
+        if ($response.StatusCode -eq '200') {
+            $success.Insert(0, $response)
+        }
+        elseif ($response.StatusCode -match '^2') {
+            $success.Add($response)
+        }
+    }
+    $nextLinkNames = @('nextLink', 'next', '@odata.nextLink')
     $arrayProperty = $null
     $bodyIsArray = $false
     foreach ($response in $success) {
-        $json = @($response.Content | Where-Object { $_.ContentType -match '^[^/]+/([^/;]+\+)?json\s*(;|$)' -or $_.ContentType -eq '*/*' }) | Select-Object -First 1
+        $json = $null
+        foreach ($media in $response.Content) {
+            if ($media.ContentType -match '^[^/]+/([^/;]+\+)?json\s*(;|$)' -or $media.ContentType -eq '*/*') {
+                $json = $media
+                break
+            }
+        }
         if ($null -eq $json -or $null -eq $json.Schema) {
             continue
         }
@@ -53,18 +69,28 @@ function Get-OpenApiPaging {
         if ($null -eq $schema.Properties) {
             continue
         }
-        $arrays = @($schema.Properties.Keys | Where-Object { $null -ne $schema.Properties[$_] -and $schema.Properties[$_].Type -eq 'array' })
-        $links = @($schema.Properties.Keys | Where-Object {
-                @('nextLink', 'next', '@odata.nextLink') -contains $_ -and $null -ne $schema.Properties[$_] -and ($schema.Properties[$_].Type -eq 'string' -or $null -eq $schema.Properties[$_].Type)
-            })
+        $arrays = [System.Collections.Generic.List[string]]::new()
+        $link = $null
+        foreach ($name in $schema.Properties.Keys) {
+            $property = $schema.Properties[$name]
+            if ($null -eq $property) {
+                continue
+            }
+            if ($property.Type -eq 'array') {
+                $arrays.Add($name)
+            }
+            elseif ($null -eq $link -and $nextLinkNames -contains $name -and ($property.Type -eq 'string' -or $null -eq $property.Type)) {
+                $link = $name
+            }
+        }
         if ($arrays.Count -eq 1) {
             $arrayProperty = $arrays[0]
-            if ($links.Count -ge 1) {
+            if ($null -ne $link) {
                 return [pscustomobject]@{
                     PSTypeName       = 'Tcs.OpenApi.Paging'
                     Kind             = 'nextLink'
                     ItemsProperty    = $arrayProperty
-                    NextLinkProperty = $links[0]
+                    NextLinkProperty = $link
                 }
             }
         }
@@ -72,16 +98,21 @@ function Get-OpenApiPaging {
     }
 
     foreach ($response in $success) {
-        if ($null -ne $response.Headers -and @($response.Headers.Keys | Where-Object { $_ -eq 'Link' }).Count -gt 0) {
-            $items = $null
-            if (-not $bodyIsArray) {
-                $items = $arrayProperty
-            }
-            return [pscustomobject]@{
-                PSTypeName       = 'Tcs.OpenApi.Paging'
-                Kind             = 'linkHeader'
-                ItemsProperty    = $items
-                NextLinkProperty = $null
+        if ($null -eq $response.Headers) {
+            continue
+        }
+        foreach ($name in $response.Headers.Keys) {
+            if ($name -eq 'Link') {
+                $items = $null
+                if (-not $bodyIsArray) {
+                    $items = $arrayProperty
+                }
+                return [pscustomobject]@{
+                    PSTypeName       = 'Tcs.OpenApi.Paging'
+                    Kind             = 'linkHeader'
+                    ItemsProperty    = $items
+                    NextLinkProperty = $null
+                }
             }
         }
     }

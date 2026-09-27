@@ -76,7 +76,7 @@ function ConvertTo-OpenApiOperation {
         $security = ConvertTo-OpenApiSecurityRequirement -Context $Context -Requirement $Operation['security'] -Pointer (Join-OpenApiJsonPointer -Pointer $pointer -Segment 'security')
     }
 
-    $tags = New-Object -TypeName System.Collections.Generic.List[string]
+    $tags = [System.Collections.Generic.List[string]]::new()
     if ($Operation['tags'] -is [System.Collections.IList]) {
         foreach ($tag in $Operation['tags']) {
             if ($null -ne $tag) {

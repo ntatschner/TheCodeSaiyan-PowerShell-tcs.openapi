@@ -24,7 +24,7 @@ function Resolve-OpenApiComponentReference {
 
     $current = $Node
     $currentPointer = $Pointer
-    $seen = New-Object -TypeName System.Collections.Generic.HashSet[string] -ArgumentList ([System.StringComparer]::Ordinal)
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
     while ($current -is [System.Collections.IDictionary] -and $current.Contains('$ref')) {
         $reference = [string]$current['$ref']
         if (-not $reference.StartsWith('#')) {

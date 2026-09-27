@@ -23,9 +23,9 @@ function ConvertTo-OpenApiMediaTypeList {
     )
 
     $groups = @(
-        (New-Object -TypeName System.Collections.Generic.List[object]),
-        (New-Object -TypeName System.Collections.Generic.List[object]),
-        (New-Object -TypeName System.Collections.Generic.List[object])
+        [System.Collections.Generic.List[object]]::new(),
+        [System.Collections.Generic.List[object]]::new(),
+        [System.Collections.Generic.List[object]]::new()
     )
     if ($Content -is [System.Collections.IDictionary]) {
         foreach ($contentType in @($Content.Keys)) {
@@ -75,7 +75,7 @@ function ConvertTo-OpenApiMediaTypeList {
             }
         }
     }
-    $all = New-Object -TypeName System.Collections.Generic.List[object]
+    $all = [System.Collections.Generic.List[object]]::new()
     foreach ($group in $groups) {
         $all.AddRange($group)
     }

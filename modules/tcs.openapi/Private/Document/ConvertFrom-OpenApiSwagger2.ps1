@@ -44,7 +44,7 @@ function ConvertFrom-OpenApiSwagger2 {
             $schemes = @($BaseUri.Scheme)
         }
     }
-    $servers = New-Object -TypeName System.Collections.Generic.List[object]
+    $servers = [System.Collections.Generic.List[object]]::new()
     if ([string]::IsNullOrEmpty($hostName)) {
         $server = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
         $server['url'] = $basePath

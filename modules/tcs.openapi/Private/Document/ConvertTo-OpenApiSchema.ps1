@@ -12,6 +12,9 @@ function ConvertTo-OpenApiSchema {
         - Without a 'type', a schema with properties/additionalProperties is an 'object' and one with
           items is an 'array'.
         - Boolean schemas (3.1 true/false) become a blank schema. Anything that is not an object gives $null.
+        - -Shallow reads only the keywords of the node itself (no items, properties, additionalProperties
+          schema, allOf/oneOf/anyOf or $ref); it is used for the stub of a circular reference.
+        - allOf members that are reference stubs are merged from their full schema.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -25,7 +28,9 @@ function ConvertTo-OpenApiSchema {
 
         [Parameter(Mandatory)]
         [AllowEmptyString()]
-        [string]$Pointer
+        [string]$Pointer,
+
+        [switch]$Shallow
     )
 
     if ($null -eq $Node) {
@@ -39,6 +44,9 @@ function ConvertTo-OpenApiSchema {
     }
 
     if ($Node.Contains('$ref')) {
+        if ($Shallow) {
+            return Get-OpenApiBlankSchema
+        }
         $referenced = Resolve-OpenApiSchemaReference -Context $Context -Reference ([string]$Node['$ref']) -Pointer $Pointer
         $hasDescription = $Node.Contains('description') -and $null -ne $Node['description']
         $isNullable = $Node['nullable'] -eq $true
@@ -59,7 +67,7 @@ function ConvertTo-OpenApiSchema {
     if ($hasType) {
         $rawType = $Node['type']
         if ($rawType -is [System.Collections.IList]) {
-            $nonNull = New-Object -TypeName System.Collections.Generic.List[string]
+            $nonNull = [System.Collections.Generic.List[string]]::new()
             foreach ($item in $rawType) {
                 if ([string]$item -ceq 'null') {
                     $schema.Nullable = $true
@@ -113,21 +121,21 @@ function ConvertTo-OpenApiSchema {
     $schema.WriteOnly = $Node['writeOnly'] -eq $true
     $schema.Deprecated = $Node['deprecated'] -eq $true
 
-    if ($Node['discriminator'] -is [System.Collections.IDictionary]) {
+    if (-not $Shallow -and $Node['discriminator'] -is [System.Collections.IDictionary]) {
         $schema.Discriminator = [pscustomobject]@{
             PropertyName = [string]$Node['discriminator']['propertyName']
             Mapping      = $Node['discriminator']['mapping']
         }
     }
 
-    if ($Node.Contains('items')) {
+    if (-not $Shallow -and $Node.Contains('items')) {
         $items = $Node['items']
-        $itemsPointer = Join-OpenApiJsonPointer -Pointer $Pointer -Segment 'items'
+        $itemsPointer = $Pointer + '/items'
         if ($items -is [System.Collections.IList]) {
             # Draft-4 style tuple: use the first item schema
             if ($items.Count -gt 0) {
                 $items = $items[0]
-                $itemsPointer = Join-OpenApiJsonPointer -Pointer $itemsPointer -Segment '0'
+                $itemsPointer += '/0'
             }
             else {
                 $items = $null
@@ -137,14 +145,15 @@ function ConvertTo-OpenApiSchema {
     }
 
     $properties = $null
-    if ($Node['properties'] -is [System.Collections.IDictionary]) {
+    if (-not $Shallow -and $Node['properties'] -is [System.Collections.IDictionary]) {
         $properties = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
-        $propertiesPointer = Join-OpenApiJsonPointer -Pointer $Pointer -Segment 'properties'
+        # Pointers are built inline here (the hot path); property names are escaped as JSON pointer segments
+        $propertiesPointer = $Pointer + '/properties/'
         foreach ($name in @($Node['properties'].Keys)) {
-            $properties[$name] = ConvertTo-OpenApiSchema -Context $Context -Node $Node['properties'][$name] -Pointer (Join-OpenApiJsonPointer -Pointer $propertiesPointer -Segment $name)
+            $properties[$name] = ConvertTo-OpenApiSchema -Context $Context -Node $Node['properties'][$name] -Pointer ($propertiesPointer + $name.Replace('~', '~0').Replace('/', '~1'))
         }
     }
-    $required = New-Object -TypeName System.Collections.Generic.List[string]
+    $required = [System.Collections.Generic.List[string]]::new()
     if ($Node['required'] -is [System.Collections.IList]) {
         foreach ($name in $Node['required']) {
             if (-not $required.Contains([string]$name)) {
@@ -158,17 +167,17 @@ function ConvertTo-OpenApiSchema {
         if ($additional -is [bool]) {
             $schema.AdditionalProperties = $additional
         }
-        else {
-            $schema.AdditionalProperties = ConvertTo-OpenApiSchema -Context $Context -Node $additional -Pointer (Join-OpenApiJsonPointer -Pointer $Pointer -Segment 'additionalProperties')
+        elseif (-not $Shallow) {
+            $schema.AdditionalProperties = ConvertTo-OpenApiSchema -Context $Context -Node $additional -Pointer ($Pointer + '/additionalProperties')
         }
     }
 
     foreach ($pair in @(@('allOf', 'AllOf'), @('oneOf', 'OneOf'), @('anyOf', 'AnyOf'))) {
-        if ($Node[$pair[0]] -is [System.Collections.IList]) {
-            $members = New-Object -TypeName System.Collections.Generic.List[object]
+        if (-not $Shallow -and $Node[$pair[0]] -is [System.Collections.IList]) {
+            $members = [System.Collections.Generic.List[object]]::new()
             $index = 0
             foreach ($member in $Node[$pair[0]]) {
-                $converted = ConvertTo-OpenApiSchema -Context $Context -Node $member -Pointer (Join-OpenApiJsonPointer -Pointer $Pointer -Segment $pair[0], ([string]$index))
+                $converted = ConvertTo-OpenApiSchema -Context $Context -Node $member -Pointer ('{0}/{1}/{2}' -f $Pointer, $pair[0], $index)
                 if ($null -ne $converted) {
                     $members.Add($converted)
                 }
@@ -180,8 +189,16 @@ function ConvertTo-OpenApiSchema {
 
     if ($null -ne $schema.AllOf) {
         $merged = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
-        $mergedRequired = New-Object -TypeName System.Collections.Generic.List[string]
-        foreach ($member in $schema.AllOf) {
+        $mergedRequired = [System.Collections.Generic.List[string]]::new()
+        foreach ($reference in $schema.AllOf) {
+            # A reference stub has no structure of its own: merge its full schema
+            $member = $reference
+            if ($null -ne $reference.RefName) {
+                $fullKey = Join-OpenApiJsonPointer -Pointer '/components/schemas' -Segment $reference.RefName
+                if ($Context.SchemaCache.ContainsKey($fullKey)) {
+                    $member = $Context.SchemaCache[$fullKey]
+                }
+            }
             if ($null -ne $member.Properties) {
                 foreach ($name in @($member.Properties.Keys)) {
                     $merged[$name] = $member.Properties[$name]
@@ -224,10 +241,10 @@ function ConvertTo-OpenApiSchema {
     $schema.Required = $required.ToArray()
 
     if (-not $hasType -and $null -eq $schema.Type) {
-        if ($null -ne $schema.Properties -or $null -ne $schema.AdditionalProperties) {
+        if ($null -ne $schema.Properties -or $null -ne $schema.AdditionalProperties -or ($Shallow -and ($Node.Contains('properties') -or $Node.Contains('additionalProperties')))) {
             $schema.Type = 'object'
         }
-        elseif ($null -ne $schema.Items) {
+        elseif ($null -ne $schema.Items -or ($Shallow -and $Node.Contains('items'))) {
             $schema.Type = 'array'
         }
     }

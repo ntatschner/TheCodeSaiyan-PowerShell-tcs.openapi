@@ -201,4 +201,30 @@ Describe 'ConvertTo-OpenApiSchema' {
             (& $Convert '{"type":"array","items":[{"type":"integer"},{"type":"string"}]}').Schema.Items.Type | Should -Be 'integer'
         }
     }
+
+    It 'reads only the node itself with -Shallow' {
+        InModuleScope tcs.openapi {
+            $context = Get-OpenApiNormalizationContext -Root (ConvertFrom-OpenApiJson -Text '{"components":{"schemas":{"X":{"type":"string"}}}}')
+            $shallow = ConvertTo-OpenApiSchema -Context $context -Pointer '' -Shallow -Node (ConvertFrom-OpenApiJson -Text '{"description":"d","properties":{"a":{"$ref":"#/components/schemas/X"}},"allOf":[{"$ref":"#/components/schemas/X"}],"items":{"type":"string"}}')
+            $shallow.Description | Should -Be 'd'
+            $shallow.Type | Should -Be 'object'
+            $shallow.Properties | Should -BeNullOrEmpty
+            $shallow.AllOf | Should -BeNullOrEmpty
+            $shallow.Items | Should -BeNullOrEmpty
+            (ConvertTo-OpenApiSchema -Context $context -Pointer '' -Shallow -Node (ConvertFrom-OpenApiJson -Text '{"items":{}}')).Type | Should -Be 'array'
+            (ConvertTo-OpenApiSchema -Context $context -Pointer '' -Shallow -Node (ConvertFrom-OpenApiJson -Text '{"$ref":"#/components/schemas/X"}')).Type | Should -BeNullOrEmpty
+            $context.SchemaCache.Count | Should -Be 0
+        }
+    }
+
+    It 'merges allOf members that are reference stubs from their full schema' {
+        InModuleScope tcs.openapi {
+            $root = ConvertFrom-OpenApiJson -Text '{"components":{"schemas":{"Base":{"type":"object","required":["id"],"properties":{"id":{"type":"string"}}},"Derived":{"allOf":[{"$ref":"#/components/schemas/Base"}],"properties":{"extra":{"type":"integer"}}}}}}'
+            $context = Get-OpenApiNormalizationContext -Root $root
+            $derived = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/Derived' -Pointer ''
+            $derived.AllOf[0].Properties | Should -BeNullOrEmpty
+            @($derived.Properties.Keys) | Should -Be @('id', 'extra')
+            $derived.Required | Should -Be @('id')
+        }
+    }
 }

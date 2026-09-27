@@ -56,8 +56,55 @@ Describe 'Resolve-OpenApiSchemaReference' {
             $context = & $NewContext '{"A":{"properties":{"b":{"$ref":"#/components/schemas/B"}}},"B":{"properties":{"a":{"$ref":"#/components/schemas/A"}}}}'
             $a = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/A' -Pointer ''
             $a.Properties['b'].RefName | Should -Be 'B'
-            $a.Properties['b'].Properties['a'].Recursive | Should -BeTrue
-            (Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/B' -Pointer '').RefName | Should -Be 'B'
+            $a.Properties['b'].Recursive | Should -BeFalse
+            $b = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/B' -Pointer ''
+            $b.RefName | Should -Be 'B'
+            $b.Properties['a'].RefName | Should -Be 'A'
+            $b.Properties['a'].Recursive | Should -BeTrue
+            $b.Properties['a'].Type | Should -Be 'object'
+            @($context.Findings | Where-Object Code -EQ 'OA022').Pointer | Should -Be @('/components/schemas/A')
+        }
+    }
+
+    It 'returns reference stubs for nested refs to named schemas and the full schema otherwise' {
+        InModuleScope tcs.openapi -Parameters @{ NewContext = $script:newContext } {
+            param($NewContext)
+            $context = & $NewContext '{"Owner":{"type":"object","description":"o","properties":{"pet":{"$ref":"#/components/schemas/Pet"},"pets":{"type":"array","items":{"$ref":"#/components/schemas/Pet"}}}},"Pet":{"type":"object","required":["id"],"properties":{"id":{"type":"string"}}}}'
+            $owner = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/Owner' -Pointer ''
+            $stub = $owner.Properties['pet']
+            $stub.RefName | Should -Be 'Pet'
+            $stub.Type | Should -Be 'object'
+            $stub.Properties | Should -BeNullOrEmpty
+            $stub.Required.Count | Should -Be 0
+            $stub.Recursive | Should -BeFalse
+            [object]::ReferenceEquals($stub, $owner.Properties['pets'].Items) | Should -BeTrue
+            $full = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/Pet' -Pointer ''
+            $full.Properties['id'].Type | Should -Be 'string'
+            $full.Required | Should -Be @('id')
+            [object]::ReferenceEquals($full, $stub) | Should -BeFalse
+        }
+    }
+
+    It 'returns the full schema for a nested ref with -Full' {
+        InModuleScope tcs.openapi -Parameters @{ NewContext = $script:newContext } {
+            param($NewContext)
+            $context = & $NewContext '{"Pet":{"type":"object","properties":{"id":{"type":"string"}}}}'
+            [void]$context.SchemaStack.Add('/somewhere')
+            (Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/Pet' -Pointer '').Properties | Should -BeNullOrEmpty
+            (Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/Pet' -Pointer '' -Full).Properties.Count | Should -Be 1
+        }
+    }
+
+    It 'keeps the serialised size linear for heavily shared references' {
+        InModuleScope tcs.openapi -Parameters @{ NewContext = $script:newContext } {
+            param($NewContext)
+            # S0 -> S1, S1 x2 -> ... -> S30: fully expanded this would be 2^30 nodes
+            $parts = foreach ($index in 0..29) {
+                '"S{0}":{{"type":"object","properties":{{"a":{{"$ref":"#/components/schemas/S{1}"}},"b":{{"$ref":"#/components/schemas/S{1}"}}}}}}' -f $index, ($index + 1)
+            }
+            $context = & $NewContext ('{' + ($parts -join ',') + ',"S30":{"type":"string"}}')
+            $s0 = Resolve-OpenApiSchemaReference -Context $context -Reference '#/components/schemas/S0' -Pointer ''
+            ($s0 | ConvertTo-Json -Depth 100 -Compress).Length | Should -BeLessThan 5000
         }
     }
 

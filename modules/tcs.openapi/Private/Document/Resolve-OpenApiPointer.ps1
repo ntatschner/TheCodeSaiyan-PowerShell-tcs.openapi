@@ -29,7 +29,7 @@ function Resolve-OpenApiPointer {
         return $notFound
     }
 
-    $segments = New-Object -TypeName System.Collections.Generic.List[string]
+    $segments = [System.Collections.Generic.List[string]]::new()
     if ($fragment.Length -gt 0) {
         foreach ($raw in $fragment.Substring(1).Split('/')) {
             $decoded = [System.Uri]::UnescapeDataString($raw)

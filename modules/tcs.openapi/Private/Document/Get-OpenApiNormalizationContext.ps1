@@ -1,7 +1,7 @@
 function Get-OpenApiNormalizationContext {
     <#
     .SYNOPSIS
-        Creates the state object that is passed through one normalisation run (findings, schema cache, visited set).
+        Creates the state object that is passed through one normalisation run (findings, schema and stub caches, visited set).
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -18,11 +18,12 @@ function Get-OpenApiNormalizationContext {
         PSTypeName       = 'Tcs.OpenApi.NormalizationContext'
         Root             = $Root
         SourceVersion    = $SourceVersion
-        Findings         = New-Object -TypeName System.Collections.Generic.List[object]
-        FindingKeys      = New-Object -TypeName System.Collections.Generic.HashSet[string] -ArgumentList ([System.StringComparer]::Ordinal)
-        SchemaCache      = New-Object -TypeName 'System.Collections.Generic.Dictionary[string,object]' -ArgumentList ([System.StringComparer]::Ordinal)
-        TaintedSchemas   = New-Object -TypeName System.Collections.Generic.HashSet[string] -ArgumentList ([System.StringComparer]::Ordinal)
-        SchemaStack      = New-Object -TypeName System.Collections.Generic.HashSet[string] -ArgumentList ([System.StringComparer]::Ordinal)
+        Findings         = [System.Collections.Generic.List[object]]::new()
+        FindingKeys      = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        SchemaCache      = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+        StubCache        = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+        TaintedSchemas   = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        SchemaStack      = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
         ExternalRefHits  = 0
         CurrentOperation = $null
     }

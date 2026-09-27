@@ -28,7 +28,7 @@ function Get-OpenApiServerList {
         $raw = @($default)
     }
 
-    $list = New-Object -TypeName System.Collections.Generic.List[object]
+    $list = [System.Collections.Generic.List[object]]::new()
     foreach ($server in $raw) {
         $url = [string]$server['url']
         if ($null -ne $BaseUri -and $BaseUri.IsAbsoluteUri -and $url -notmatch '^[A-Za-z][A-Za-z0-9+.-]*:' -and $url -notmatch '\{') {
