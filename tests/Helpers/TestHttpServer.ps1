@@ -23,6 +23,7 @@ function Start-TestHttpServer {
     .SYNOPSIS
         Starts the test HTTP server and returns { BaseUri, Requests, Stop() }.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test helper: starts a loopback listener that the test stops.')]
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param(
