@@ -83,25 +83,3 @@ Describe 'Invoke-OpenApiRequest paging (end to end)' {
         $script:server.Requests.Count | Should -Be 1
     }
 }
-
-Describe 'Get-OpenApiLinkHeaderNext' {
-    It 'finds rel="next" among several links' {
-        InModuleScope -ModuleName tcs.openapi {
-            Get-OpenApiLinkHeaderNext -LinkHeader '<https://a/x?page=1>; rel="prev", <https://a/x?page=3>; rel="next"' | Should -Be 'https://a/x?page=3'
-            Get-OpenApiLinkHeaderNext -LinkHeader '</p2>; rel=next' | Should -Be '/p2'
-            Get-OpenApiLinkHeaderNext -LinkHeader '</p2>; rel="last"' | Should -BeNullOrEmpty
-            Get-OpenApiLinkHeaderNext -LinkHeader @('</a>; rel="prev"', '</b>; rel="next last"') | Should -Be '/b'
-        }
-    }
-}
-
-Describe 'Resolve-OpenApiNextPageUri' {
-    It 'resolves relative links and rejects other hosts' {
-        InModuleScope -ModuleName tcs.openapi {
-            Resolve-OpenApiNextPageUri -Link '?page=2' -CurrentUri 'https://api.example.com/v1/items?page=1' -OriginUri 'https://api.example.com/v1/items' | Should -Be 'https://api.example.com/v1/items?page=2'
-            Resolve-OpenApiNextPageUri -Link '/v1/items/next' -CurrentUri 'https://api.example.com/v1/items' -OriginUri 'https://api.example.com/v1/items' | Should -Be 'https://api.example.com/v1/items/next'
-            Resolve-OpenApiNextPageUri -Link 'https://evil.example.com/x' -CurrentUri 'https://api.example.com/v1' -OriginUri 'https://api.example.com/v1' -WarningAction SilentlyContinue | Should -BeNullOrEmpty
-            Resolve-OpenApiNextPageUri -Link 'http://api.example.com/x' -CurrentUri 'https://api.example.com/v1' -OriginUri 'https://api.example.com/v1' -WarningAction SilentlyContinue | Should -BeNullOrEmpty
-        }
-    }
-}

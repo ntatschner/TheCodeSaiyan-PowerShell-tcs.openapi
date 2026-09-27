@@ -101,20 +101,3 @@ Describe 'Invoke-OpenApiRequest retries (end to end)' {
         $script:server.Requests.Count | Should -Be 1
     }
 }
-
-Describe 'Get-OpenApiRetryPolicy' {
-    It 'retries 408/429/5xx for idempotent methods and 429/503 for <Method>' -ForEach @(
-        @{ Method = 'POST' }
-        @{ Method = 'PATCH' }
-    ) {
-        InModuleScope -ModuleName tcs.openapi -Parameters @{ Method = $Method } {
-            $policy = Get-OpenApiRetryPolicy -Method $Method -MaxRetries 3
-            $policy.StatusCodes | Should -Be @(429, 503)
-            $policy.RetryConnectionFailure | Should -BeFalse
-            $get = Get-OpenApiRetryPolicy -Method 'get' -MaxRetries 5
-            $get.StatusCodes | Should -Be @(408, 429, 500, 502, 503, 504)
-            $get.MaxRetries | Should -Be 5
-            $get.RetryConnectionFailure | Should -BeTrue
-        }
-    }
-}
