@@ -1,0 +1,76 @@
+{
+  "getPetById": {
+    "PSTypeName": "Tcs.OpenApi.OperationMetadata",
+    "OperationId": "getPetById",
+    "Method": "GET",
+    "Path": "/pets/{petId}",
+    "Service": "Fixture",
+    "Deprecated": false,
+    "Parameters": [
+      { "Name": "petId", "In": "path", "Style": null, "Explode": null, "AllowReserved": false },
+      { "Name": "fields", "In": "query", "Style": "form", "Explode": false, "AllowReserved": false },
+      { "Name": "X-Request-Id", "In": "header", "Style": null, "Explode": null, "AllowReserved": false }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": ["application/json"],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {
+      "api_key": { "Name": "api_key", "Type": "apiKey", "In": "header", "ParameterName": "X-API-Key", "Scheme": null, "BearerFormat": null, "Flows": null }
+    },
+    "Paging": null,
+    "ResponseTypeName": "Fixture.Pet"
+  },
+  "listPets": {
+    "PSTypeName": "Tcs.OpenApi.OperationMetadata",
+    "OperationId": "listPets",
+    "Method": "GET",
+    "Path": "/pets",
+    "Service": "Fixture",
+    "Deprecated": false,
+    "Parameters": [
+      { "Name": "tags", "In": "query", "Style": "form", "Explode": true, "AllowReserved": false }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": ["application/json"],
+    "BinaryResponse": false,
+    "Security": [],
+    "SecuritySchemes": {},
+    "Paging": { "Kind": "nextLink", "ItemsProperty": "value", "NextLinkProperty": "nextLink" },
+    "ResponseTypeName": "Fixture.Pet"
+  },
+  "createPet": {
+    "PSTypeName": "Tcs.OpenApi.OperationMetadata",
+    "OperationId": "createPet",
+    "Method": "POST",
+    "Path": "/pets",
+    "Service": "Fixture",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": ["application/json", "application/x-www-form-urlencoded"],
+    "ResponseContentTypes": ["application/json"],
+    "BinaryResponse": false,
+    "Security": [ { "petstore_auth": ["write:pets"] } ],
+    "SecuritySchemes": {
+      "petstore_auth": { "Name": "petstore_auth", "Type": "oauth2", "In": null, "ParameterName": null, "Scheme": null, "BearerFormat": null, "Flows": { "clientCredentials": { "TokenUrl": "{{BaseUri}}/oauth/token", "Scopes": { "write:pets": "Change pets" } } } }
+    },
+    "Paging": null,
+    "ResponseTypeName": "Fixture.Pet"
+  },
+  "downloadPhoto": {
+    "PSTypeName": "Tcs.OpenApi.OperationMetadata",
+    "OperationId": "downloadPhoto",
+    "Method": "GET",
+    "Path": "/pets/{petId}/photo",
+    "Service": "Fixture",
+    "Deprecated": true,
+    "Parameters": [ { "Name": "petId", "In": "path", "Style": null, "Explode": null, "AllowReserved": false } ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": ["image/png"],
+    "BinaryResponse": true,
+    "Security": [],
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  }
+}
