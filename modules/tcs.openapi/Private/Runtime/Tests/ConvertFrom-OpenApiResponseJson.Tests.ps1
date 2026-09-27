@@ -12,13 +12,13 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'ConvertFrom-OpenApiJson' {
+Describe 'ConvertFrom-OpenApiResponseJson' {
     It 'keeps arrays as arrays, including one-item and empty arrays' {
         InModuleScope -ModuleName tcs.openapi {
-            $one = ConvertFrom-OpenApiJson -Text '[{"a":1}]'
+            $one = ConvertFrom-OpenApiResponseJson -Text '[{"a":1}]'
             , $one | Should -BeOfType ([object[]])
             $one.Count | Should -Be 1
-            $empty = ConvertFrom-OpenApiJson -Text '[]'
+            $empty = ConvertFrom-OpenApiResponseJson -Text '[]'
             , $empty | Should -BeOfType ([object[]])
             $empty.Count | Should -Be 0
         }
@@ -26,15 +26,15 @@ Describe 'ConvertFrom-OpenApiJson' {
 
     It 'parses objects and scalars and returns $null for empty text' {
         InModuleScope -ModuleName tcs.openapi {
-            (ConvertFrom-OpenApiJson -Text '{"a":{"b":true}}').a.b | Should -BeTrue
-            ConvertFrom-OpenApiJson -Text '"s"' | Should -Be 's'
-            ConvertFrom-OpenApiJson -Text ' ' | Should -BeNullOrEmpty
+            (ConvertFrom-OpenApiResponseJson -Text '{"a":{"b":true}}').a.b | Should -BeTrue
+            ConvertFrom-OpenApiResponseJson -Text '"s"' | Should -Be 's'
+            ConvertFrom-OpenApiResponseJson -Text ' ' | Should -BeNullOrEmpty
         }
     }
 
     It 'throws for invalid JSON' {
         InModuleScope -ModuleName tcs.openapi {
-            { ConvertFrom-OpenApiJson -Text '{nope' } | Should -Throw
+            { ConvertFrom-OpenApiResponseJson -Text '{nope' } | Should -Throw
         }
     }
 }

@@ -1,4 +1,4 @@
-function ConvertFrom-OpenApiJson {
+function ConvertFrom-OpenApiResponseJson {
     <#
     .SYNOPSIS
         Parses JSON text into objects without rewriting values (date strings stay strings where ConvertFrom-Json allows it).

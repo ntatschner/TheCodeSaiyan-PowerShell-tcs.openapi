@@ -24,7 +24,7 @@ function ConvertFrom-OpenApiErrorBody {
     $looksJson = (Get-OpenApiMediaTypeKind -ContentType $ContentType) -eq 'Json' -or $trimmed.StartsWith('{') -or $trimmed.StartsWith('[')
     if ($looksJson) {
         try {
-            return (ConvertFrom-OpenApiJson -Text $Text)
+            return (ConvertFrom-OpenApiResponseJson -Text $Text)
         }
         catch {
             Write-Verbose -Message "The error response body is not valid JSON: $($_.Exception.Message)"

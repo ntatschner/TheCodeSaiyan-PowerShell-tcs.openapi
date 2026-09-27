@@ -391,7 +391,7 @@ function Invoke-OpenApiRequest {
             $parsed = $null
             $parsedOk = $true
             try {
-                $parsed = ConvertFrom-OpenApiJson -Text $text
+                $parsed = ConvertFrom-OpenApiResponseJson -Text $text
             }
             catch {
                 $parsedOk = $false
@@ -417,7 +417,7 @@ function Invoke-OpenApiRequest {
         }
         elseif ($pagingKind -ne 'linkHeader' -and -not [string]::IsNullOrEmpty($nextLinkProperty) -and $Raw -and $isText) {
             try {
-                $link = [string](Get-OpenApiMember -InputObject (ConvertFrom-OpenApiJson -Text $content) -Name $nextLinkProperty)
+                $link = [string](Get-OpenApiMember -InputObject (ConvertFrom-OpenApiResponseJson -Text $content) -Name $nextLinkProperty)
             }
             catch {
                 $link = $null
