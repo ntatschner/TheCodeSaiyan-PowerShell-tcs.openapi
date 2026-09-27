@@ -8,7 +8,9 @@ function Get-OpenApiGenCommandName {
            replace the derived verb and noun.
         2. From the operationId: the words are split, the first word is mapped to a verb (see
            Resolve-OpenApiGenVerb) and the rest is the noun. An unknown first word gives the method's
-           default verb and stays in the noun.
+           default verb and stays in the noun. When the noun then ends with the operation's own HTTP method
+           word (Get, Post, Put, Patch, Delete, Head, Options, Trace) and other words remain, that word is
+           dropped: ConnectorPost (POST) -> New-Connector, ConnectorGet (GET) -> Get-Connector.
         3. Without an operationId (or when the document model generated it, finding OA010): the method's
            default verb and the last non-parameter path segment.
         4. Noun = NounPrefix + PascalCase words with the last word singularised (the last word with
@@ -70,6 +72,11 @@ function Get-OpenApiGenCommandName {
         else {
             $verb = (Resolve-OpenApiGenVerb -Method $method).Verb
             $nounWords = $words
+        }
+        # 'ConnectorGet' (GET): the method word repeats what the verb says
+        $nounWords = @($nounWords)
+        if ($nounWords.Count -gt 1 -and ([string]$nounWords[$nounWords.Count - 1]).ToUpperInvariant() -eq $method) {
+            $nounWords = @($nounWords | Select-Object -First ($nounWords.Count - 1))
         }
         if ($nounWords.Count -eq 0) {
             $nounWords = $pathWords

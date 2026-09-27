@@ -81,7 +81,8 @@ function New-TestParameter {
         [switch]$Deprecated,
         [string]$Style,
         [object]$Explode,
-        [object]$Example
+        [object]$Example,
+        [switch]$CatchAll
     )
     if ($null -eq $Schema) { $Schema = New-TestSchema -Type string }
     if (-not $Style) {
@@ -99,6 +100,7 @@ function New-TestParameter {
         Explode       = [bool]$Explode
         AllowReserved = $false
         Example       = $Example
+        CatchAll      = [bool]$CatchAll
     }
 }
 

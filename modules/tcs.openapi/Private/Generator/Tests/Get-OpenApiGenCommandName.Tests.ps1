@@ -31,6 +31,17 @@ Describe 'Get-OpenApiGenCommandName' {
         @{ OperationId = 'PetsFindByStatus'; Method = 'GET'; Path = '/pets'; Expected = 'Get-PetsFindByStatus' }
         @{ OperationId = 'list'; Method = 'GET'; Path = '/users/{id}/policies'; Expected = 'Get-Policy' }
         @{ OperationId = 'listOrders_2'; Method = 'GET'; Path = '/orders'; Expected = 'Get-Order2' }
+        @{ OperationId = 'ConnectorGet'; Method = 'GET'; Path = '/c/{id}/{path}'; Expected = 'Get-Connector' }
+        @{ OperationId = 'ConnectorPost'; Method = 'POST'; Path = '/c/{id}/{path}'; Expected = 'New-Connector' }
+        @{ OperationId = 'ConnectorPut'; Method = 'PUT'; Path = '/c/{id}/{path}'; Expected = 'Set-Connector' }
+        @{ OperationId = 'ConnectorPatch'; Method = 'PATCH'; Path = '/c/{id}/{path}'; Expected = 'Update-Connector' }
+        @{ OperationId = 'ConnectorDelete'; Method = 'DELETE'; Path = '/c/{id}/{path}'; Expected = 'Remove-Connector' }
+        @{ OperationId = 'connector_head'; Method = 'HEAD'; Path = '/c'; Expected = 'Test-Connector' }
+        @{ OperationId = 'ItemsOptions'; Method = 'OPTIONS'; Path = '/items'; Expected = 'Get-Item' }
+        @{ OperationId = 'getRepoHead'; Method = 'GET'; Path = '/repo/head'; Expected = 'Get-RepoHead' }
+        @{ OperationId = 'listProductOptions'; Method = 'GET'; Path = '/products/options'; Expected = 'Get-ProductOption' }
+        @{ OperationId = 'Get'; Method = 'GET'; Path = '/things'; Expected = 'Get-Thing' }
+        @{ OperationId = 'ThingPost'; Method = 'PUT'; Path = '/things'; Expected = 'Set-ThingPost' }
     ) {
         param($OperationId, $Method, $Path, $Expected)
         $name = Get-TestName -Operation (New-TestOperation -OperationId $OperationId -Method $Method -Path $Path)

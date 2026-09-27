@@ -12,7 +12,8 @@
 
       - builds the URL from the path template and the path and query parameters, serialising arrays and objects
         with the parameter's style and explode settings (form, spaceDelimited, pipeDelimited, deepObject, simple,
-        label, matrix); booleans are sent as true/false and dates as ISO 8601;
+        label, matrix); booleans are sent as true/false and dates as ISO 8601; a path parameter flagged CatchAll
+        or AllowReserved keeps the '/' of its value (each segment is escaped on its own);
       - sends header and cookie parameters (cookies as one Cookie header);
       - encodes the body by content type: JSON, application/x-www-form-urlencoded, multipart/form-data (FileInfo,
         byte[] and stream values become file parts), text, or binary (byte[], stream or FileInfo);
@@ -20,8 +21,10 @@
         (API key in a header, query or cookie, HTTP basic, bearer token, or OAuth2 client credentials with token
         caching and one refresh on 401);
       - retries throttled and failed requests with tcs.core Invoke-WithRetry, honouring Retry-After;
-      - converts JSON responses to objects (adding the response PSTypeName), saves binary responses to -OutFile,
-        and follows next-page links with -All.
+      - converts JSON responses to objects (adding the response PSTypeName), outputs the items of a page for a
+        pageable operation and the UnwrapProperty of the response for other operations that name one, saves
+        binary responses to -OutFile, and with -All follows next-page links or repeats the request with the
+        page token of each response.
 
     HTTP errors are written as ErrorRecords with the FullyQualifiedErrorId 'OpenApi.<Service>.<StatusCode>'
     (connection failures 'OpenApi.<Service>.Connection'); when -Cmdlet is passed they are written through the
@@ -32,8 +35,11 @@
 
 .PARAMETER Operation
     The operation metadata (a hashtable or object with OperationId, Method, Path, Parameters, RequestContentTypes,
-    ResponseContentTypes, BinaryResponse, Security, SecuritySchemes, Paging and ResponseTypeName), as written by the
-    generator to OpenApi/operations.json.
+    ResponseContentTypes, BinaryResponse, Security, SecuritySchemes, Paging, ResponseTypeName and optionally
+    UnwrapProperty), as written by the generator to OpenApi/operations.json. Paging is
+    { Kind = 'nextLink'; ItemsProperty; NextLinkProperty }, { Kind = 'linkHeader'; ItemsProperty } or
+    { Kind = 'token'; ItemsProperty; TokenParameter; TokenProperty }. Members that are missing (metadata written
+    by an older generator) keep their earlier behaviour.
 
 .PARAMETER PathParameters
     Values of path parameters, keyed by their name in the specification.
@@ -58,8 +64,10 @@
     Saves the response body to this file and returns the FileInfo.
 
 .PARAMETER All
-    Follows next-page links (a nextLink property or a Link header with rel="next") on the same host and writes the
-    items of every page.
+    Follows next-page links (a nextLink property or a Link header with rel="next") on the same host, or for token
+    paging repeats the request with the token query parameter set from each response (the other query parameters,
+    the method and the body are kept) until the token is empty, missing or repeats, and writes the items of every
+    page.
 
 .PARAMETER Raw
     Returns an object with StatusCode, Headers and Content (text, or bytes for binary responses) instead of
@@ -162,13 +170,25 @@ function Invoke-OpenApiRequest {
         foreach ($preference in @($callerPreference.Keys)) {
             $commonName = $preference.Replace('Preference', '')
             if (-not $PSBoundParameters.ContainsKey($commonName) -and -not ($preference -eq 'WarningPreference' -and $PSBoundParameters.ContainsKey('WarningAction'))) {
-                Set-Variable -Name $preference -Value $callerPreference[$preference]
+                $value = $callerPreference[$preference]
+                if ([string]$value -eq 'Ignore') {
+                    # See below: Ignore is not a valid preference variable value on Windows PowerShell 5.1
+                    $value = [System.Management.Automation.ActionPreference]::SilentlyContinue
+                }
+                Set-Variable -Name $preference -Value $value
             }
         }
     }
     if ($DebugPreference -eq 'Inquire') {
         # Windows PowerShell 5.1 sets Inquire for -Debug; do not prompt for every message
         $DebugPreference = 'Continue'
+    }
+    # Windows PowerShell 5.1 throws when Write-Warning (or Write-Verbose ...) reads a preference variable set to
+    # Ignore (as -WarningAction Ignore does); the engine writes its own messages with SilentlyContinue instead
+    foreach ($preference in @('VerbosePreference', 'DebugPreference', 'WarningPreference', 'InformationPreference')) {
+        if ([string](Get-Variable -Name $preference -ValueOnly) -eq 'Ignore') {
+            Set-Variable -Name $preference -Value ([System.Management.Automation.ActionPreference]::SilentlyContinue)
+        }
     }
 
     $writeError = {
@@ -290,13 +310,27 @@ function Invoke-OpenApiRequest {
     $pagingKind = [string](Get-OpenApiMember -InputObject $paging -Name 'Kind')
     $itemsProperty = [string](Get-OpenApiMember -InputObject $paging -Name 'ItemsProperty')
     $nextLinkProperty = [string](Get-OpenApiMember -InputObject $paging -Name 'NextLinkProperty')
-    if ($null -ne $paging -and $pagingKind -ne 'linkHeader') {
+    $tokenParameter = [string](Get-OpenApiMember -InputObject $paging -Name 'TokenParameter')
+    $tokenProperty = [string](Get-OpenApiMember -InputObject $paging -Name 'TokenProperty')
+    $tokenPaging = ($pagingKind -eq 'token' -and -not [string]::IsNullOrEmpty($tokenParameter))
+    if ($tokenPaging) {
+        $nextLinkProperty = ''
+        if ([string]::IsNullOrEmpty($tokenProperty)) {
+            $tokenProperty = $tokenParameter
+        }
+    }
+    elseif ($null -ne $paging -and $pagingKind -ne 'linkHeader') {
         if ([string]::IsNullOrEmpty($itemsProperty)) {
             $itemsProperty = 'value'
         }
         if ([string]::IsNullOrEmpty($nextLinkProperty)) {
             $nextLinkProperty = 'nextLink'
         }
+    }
+    # A pageable operation outputs the items of its pages; UnwrapProperty applies to the other operations
+    $unwrapProperty = ''
+    if ($null -eq $paging) {
+        $unwrapProperty = [string](Get-OpenApiMember -InputObject $Operation -Name 'UnwrapProperty')
     }
     $typeName = [string](Get-OpenApiMember -InputObject $Operation -Name 'ResponseTypeName')
     $binaryResponse = [bool](Get-OpenApiMember -InputObject $Operation -Name 'BinaryResponse')
@@ -315,6 +349,14 @@ function Invoke-OpenApiRequest {
 
     $originUri = $uri
     $visited = @{}
+    $visitedTokens = @{}
+    if ($tokenPaging -and $null -ne $QueryParameters) {
+        foreach ($key in $QueryParameters.Keys) {
+            if ([string]$key -eq $tokenParameter -and -not [string]::IsNullOrEmpty([string]$QueryParameters[$key])) {
+                $visitedTokens[[string]$QueryParameters[$key]] = $true
+            }
+        }
+    }
     $pageMethod = $method
     $pageFactory = $contentFactory
     while ($null -ne $uri) {
@@ -407,7 +449,7 @@ function Invoke-OpenApiRequest {
                 $text
             }
             if ($parsedOk) {
-                Write-OpenApiResponseOutput -InputObject $parsed -ItemsProperty $itemsProperty -TypeName $typeName
+                Write-OpenApiResponseOutput -InputObject $parsed -ItemsProperty $itemsProperty -TypeName $typeName -UnwrapProperty $unwrapProperty
             }
         }
         elseif ($mediaKind -eq 'Text' -or $mediaKind -eq 'Form') {
@@ -420,6 +462,49 @@ function Invoke-OpenApiRequest {
         # Next page
         $next = $null
         $link = $null
+        if ($tokenPaging) {
+            $token = $null
+            $page = $null
+            if ($parsedOk -and $null -ne $parsed -and -not $Raw) {
+                $page = $parsed
+            }
+            elseif ($Raw -and $isText) {
+                try {
+                    $page = ConvertFrom-OpenApiResponseJson -Text $content
+                }
+                catch {
+                    $page = $null
+                }
+            }
+            if ($null -ne $page -and $page -isnot [array]) {
+                $token = Get-OpenApiMember -InputObject $page -Name $tokenProperty
+            }
+            if ($null -ne $token -and -not [string]::IsNullOrEmpty([string]$token)) {
+                $token = [string]$token
+                if (-not $All) {
+                    Write-Verbose -Message 'More results are available; use -All to get every page.'
+                }
+                elseif ($visitedTokens.ContainsKey($token)) {
+                    Write-Warning -Message "Paging stopped: the page token '$token' was already used."
+                }
+                else {
+                    $visitedTokens[$token] = $true
+                    # The caller's query parameters with the token set; same method and body as the first request
+                    $pageQuery = [ordered]@{}
+                    if ($null -ne $QueryParameters) {
+                        foreach ($key in $QueryParameters.Keys) {
+                            if ([string]$key -ne $tokenParameter) {
+                                $pageQuery[[string]$key] = $QueryParameters[$key]
+                            }
+                        }
+                    }
+                    $pageQuery[$tokenParameter] = $token
+                    $next = New-OpenApiRequestUri -BaseUri $context.BaseUri -Path $path -Parameter $parameterSpecs -PathParameters $PathParameters -QueryParameters $pageQuery
+                }
+            }
+            $uri = $next
+            continue
+        }
         if ($pagingKind -ne 'linkHeader' -and -not [string]::IsNullOrEmpty($nextLinkProperty) -and $parsedOk -and $null -ne $parsed -and -not $Raw) {
             $link = [string](Get-OpenApiMember -InputObject $parsed -Name $nextLinkProperty)
         }

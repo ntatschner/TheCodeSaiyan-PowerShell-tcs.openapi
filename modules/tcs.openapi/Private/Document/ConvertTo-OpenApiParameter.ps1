@@ -1,11 +1,12 @@
 function ConvertTo-OpenApiParameter {
     <#
     .SYNOPSIS
-        Normalises a resolved raw parameter into { Name, In, Required, Description, Deprecated, Schema, Style, Explode, AllowReserved, Example }.
+        Normalises a resolved raw parameter into { Name, In, Required, Description, Deprecated, Schema, Style, Explode, AllowReserved, Example, CatchAll }.
     .DESCRIPTION
         Defaults per the specification: style 'simple' for path/header and 'form' for query/cookie;
         explode true for 'form' and false otherwise; path parameters are always required. A parameter
-        with 'content' instead of 'schema' uses the schema of its first media type.
+        with 'content' instead of 'schema' uses the schema of its first media type. CatchAll is always false
+        here; ConvertTo-OpenApiOperation sets it for the parameter of a catch-all path segment ('*path').
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -81,5 +82,6 @@ function ConvertTo-OpenApiParameter {
         Explode       = $explode
         AllowReserved = $Node['allowReserved'] -eq $true
         Example       = $example
+        CatchAll      = $false
     }
 }

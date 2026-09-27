@@ -51,6 +51,21 @@ New-PetStorePet -Name 'Rex' -Category @{ id = 1; name = 'dogs' } -WhatIf
 takes a model from `Import-OpenApiDocument`. The result lists the functions, the findings and the skipped
 operations.
 
+### Envelopes: -UnwrapProperty
+
+Some APIs wrap every result, for example `{ "data": { ... }, "httpStatusCode": 200, "traceId": "..." }`.
+`New-OpenApiModule -UnwrapProperty data` makes each command whose first 2xx JSON response schema is an object
+with a `data` property return the value of `data` instead (an array item by item), typed with that property's
+schema name when it has one. It applies only when a response actually has the property, never with `-Raw`, and
+not to pageable operations, which return the items of each page anyway.
+
+```powershell
+New-OpenApiModule -Path ./sitemanager.json -ModuleName UniFi.SiteManager -NounPrefix UniFi -UnwrapProperty data -OutputPath ./out
+Get-UniFiHostById -Id $id        # the host, not { data, httpStatusCode, traceId }
+Get-UniFiHost -All               # every host, following nextToken
+Get-UniFiConnector -Id $id -Path 'proxy/network/integration/v1/sites'
+```
+
 ## The generated module
 
 ```
@@ -89,9 +104,20 @@ function Get-PetStorePetById {
 }
 ```
 
+## Catch-all paths
+
+Path values are escaped as one segment, so `-Id 'a/b'` is sent as `a%2Fb`. Router-style documents end some paths
+with a catch-all segment, such as `/v1/connector/consoles/{id}/*path`. The generator reads a final `*name` (or
+`{name*}`) whose name is a path parameter as that parameter, flagged `CatchAll`: its value keeps its slashes and
+each segment is escaped on its own, so `-Path 'proxy/network/integration/v1/sites'` calls
+`/v1/connector/consoles/<id>/proxy/network/integration/v1/sites` (leading and trailing slashes are dropped).
+`allowReserved` path parameters are sent the same way. `Test-OpenApiDocument` reports a path parameter that is
+not in the path (OA023, Warning) and a `{placeholder}` without a path parameter (OA024, Error).
+
 ## Connections and authentication
 
-`Set-<Prefix>Context` is `Set-OpenApiContext -Service <ModuleName>`: the service name is the module name. It
+`Set-<Prefix>Context` is `Set-OpenApiContext -Service <ModuleName>`: the service name is the module name (the
+generated README shows it with the credential parameters of the document's security schemes). It
 takes `-BaseUri`, credentials, `-Header` (extra headers for every request), `-TimeoutSec`, `-Proxy`,
 `-ProxyCredential`, `-SkipCertificateCheck`, `-MaxRetries`, `-Persist` and `-PassThru`.
 
@@ -110,11 +136,15 @@ answers 401.
 
 ## Paging, downloads and raw responses
 
-- **Paging**: operations marked with `x-ms-pageable`, or whose response is an object with one array property and a
-  `nextLink`/`next`/`@odata.nextLink` string, or that declare a `Link` response header, get `-All`. `-All`
-  follows the next links (relative or absolute, same host only, never the same URL twice) and streams items as
-  pages arrive, so `Select-Object -First 5` stops fetching. Without `-All` you get one page. Either way the
-  output is the items, each typed `<Service>.<ItemSchema>`.
+- **Paging**: pageable operations get `-All`, which streams items as pages arrive, so `Select-Object -First 5`
+  stops fetching. Without `-All` you get one page. Either way the output is the items, each typed
+  `<Service>.<ItemSchema>`. Three kinds are detected (in this order):
+
+  | Kind | Detected from | `-All` |
+  |---|---|---|
+  | `nextLink` | `x-ms-pageable`, or a response object with one array property and a `nextLink`/`next`/`@odata.nextLink` string | follows the link (relative or absolute, same host only, never the same URL twice) |
+  | `token` | a query parameter `nextToken`, `pageToken`, `next_token`, `page_token`, `cursor`, `continuationToken` or `continuation_token` (any case) and a response object with one array property and a string named like the parameter or `nextToken`/`nextPageToken`/`next_page_token`/`next_cursor`/`nextCursor` | repeats the request (same method, body and query parameters) with the token from each response until it is empty, missing or repeats |
+  | `linkHeader` | a declared `Link` response header | follows `Link: <...>; rel="next"` |
 - **Downloads**: operations with a binary response get `-OutFile`, which streams the body to the file and returns
   its `FileInfo`. Without `-OutFile` the body is returned as one `byte[]`.
 - **JSON** responses become objects (no schema validation, no value rewriting) with the PSTypeName
@@ -143,7 +173,10 @@ answers 401.
 2. From the operationId: the first word maps to an approved verb (get/list/find/search -> Get, create/add/new/post
    -> New, update/patch/set/put/replace -> Set for PUT and Update for PATCH, delete/remove -> Remove, and start,
    stop, enable, import, export, test, invoke, send, sync, publish, ... to the matching verb); the rest is the
-   noun. Without an operationId: the method's default verb and the last literal path segment.
+   noun. A last word that repeats the operation's HTTP method is dropped (`ConnectorGet` -> `Get-Connector`,
+   `ConnectorPost` -> `New-Connector`, `ConnectorPut` -> `Set-Connector`, `ConnectorPatch` -> `Update-Connector`,
+   `ConnectorDelete` -> `Remove-Connector`). Without an operationId: the method's default verb and the last
+   literal path segment.
 3. Noun = `<NounPrefix>` + PascalCase words, last word singular, letters and digits only.
 4. Collisions add the distinguishing path segment (`Get-PetOwnerByName`) or the method, then a number; each rename
    is finding OA040. The order is deterministic (path, then method), so adding operations does not rename others.
@@ -168,15 +201,18 @@ Vendor extensions read by the generator: `x-ps-name`, `x-ps-verb`, `x-ps-noun` (
 | Document versions | Swagger 2.0 (converted to the OpenAPI 3 model), OpenAPI 3.0.x and 3.1.x; JSON; YAML with powershell-yaml; from a file, URL or string | Other versions (OA001) |
 | `$ref` | Local refs to schemas, parameters, request bodies, responses, headers and security schemes; circular schemas (OA022) | External / URL refs (OA020: the operation is skipped); unresolved refs (OA021) |
 | Schemas | allOf merged; `nullable` and 3.1 `["x","null"]`; enum, pattern, minimum/maximum, length and item counts become validation attributes | oneOf/anyOf bodies only as `-Body` (OA050); 3.1 multiple non-null types are untyped (OA031); responses are not validated |
-| Parameters | path (simple, label, matrix), query (form, spaceDelimited, pipeDelimited, deepObject, allowReserved), header, cookie; Swagger `collectionFormat` | A `content`-based parameter uses the schema of its first media type and is sent as a plain value |
+| Parameters | path (simple, label, matrix; a final catch-all segment such as `/consoles/{id}/*path` or `{path*}` keeps the slashes of its value), query (form, spaceDelimited, pipeDelimited, deepObject, allowReserved), header, cookie; Swagger `collectionFormat` | A `content`-based parameter uses the schema of its first media type and is sent as a plain value; a path parameter missing from the path is ignored (OA023); a `{placeholder}` without a parameter cannot be filled (OA024) |
 | Request bodies | JSON (flattened into parameters, or `-Body`), form-urlencoded, multipart (FileInfo values become file parts), binary (byte[], Stream, FileInfo), text | XML and other media types are sent as a raw string or bytes (OA051) |
 | Responses | JSON to typed objects, text, binary to byte[] or `-OutFile`, `-Raw` | XML is returned as text |
 | Security | apiKey (header, query, cookie), http basic and bearer, oauth2 clientCredentials, any oauth2/openIdConnect scheme with `-BearerToken` | Other oauth2 flows, openIdConnect discovery, mutualTLS, http digest (OA030): use `-BearerToken` or `-Header` |
-| Paging | `x-ms-pageable`, nextLink-style properties, `Link: rel="next"` | Offset or cursor paging that needs a request parameter changed |
+| Paging | `x-ms-pageable`, nextLink-style properties, page tokens/cursors returned in the response (`nextToken`, `pageToken`, `cursor`, ...), `Link: rel="next"` | Offset/page-number paging (`offset`, `page`): call again with the next value |
+| Responses in an envelope | `-UnwrapProperty` returns one property (such as `data`) of every response that has it | One property name per module |
 | Servers | First absolute http(s) server (variables take their defaults) is the `-BaseUri` default | Relative servers are not used as defaults: pass `-BaseUri` |
 | Other | Deprecated operations (OA060), missing operationIds (generated, OA010) | Callbacks, links and webhooks are ignored; operations with a duplicate operationId are skipped (OA011, OA070): call them with `Invoke-OpenApiRequest` |
 
 `Test-OpenApiDocument` lists every finding; the codes are listed in [DESIGN.md](DESIGN.md#findings-codes-non-exhaustive).
+A document without findings returns nothing and prints `No problems found in <file> (<n> operations).`;
+`-Summary` returns one object with the operation count and the number of errors, warnings and information findings.
 
 ## PowerShell 5.1 and 7
 

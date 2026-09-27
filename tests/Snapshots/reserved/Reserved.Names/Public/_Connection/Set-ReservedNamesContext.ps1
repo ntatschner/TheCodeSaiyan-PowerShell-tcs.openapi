@@ -57,7 +57,7 @@ function Set-ReservedNamesContext {
         Returns the context.
 
     .EXAMPLE
-        Set-ReservedNamesContext -BaseUri 'https://api.example.com' -BearerToken (Read-Host -AsSecureString -Prompt 'Token')
+        Set-ReservedNamesContext -BaseUri 'https://api.example.com'
 
     .LINK
         Set-OpenApiContext

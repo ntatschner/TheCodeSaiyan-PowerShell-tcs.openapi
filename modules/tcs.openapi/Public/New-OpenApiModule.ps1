@@ -52,6 +52,15 @@
     PowerShell command (Get-Item, New-Item, Get-Content, ...) is never generated: it gets the PascalCase
     module name as its prefix instead (Get-<ModuleName>Item) and an OA042 warning finding.
 
+.PARAMETER UnwrapProperty
+    The name of a response property that wraps the actual result, such as 'data' for APIs that answer
+    { "data": {...}, "traceId": "..." }. For every operation whose first 2xx JSON response schema is an
+    object with this property, the command outputs the value of the property instead of the whole
+    response (array values item by item), typed with the property's schema name when it has one. It is
+    applied only when a response actually has the property, never with -Raw, and not to pageable
+    operations, which output the items of each page already. Stored per operation in
+    OpenApi/operations.json (UnwrapProperty).
+
 .PARAMETER ModuleVersion
     The version of the generated module. Defaults to 0.1.0.
 
@@ -88,6 +97,12 @@
     $result.Findings | Where-Object Severity -NE 'Information'
 
     Regenerates a module from a downloaded document and lists the warnings and errors.
+
+.EXAMPLE
+    New-OpenApiModule -Path ./sitemanager.json -ModuleName UniFi.SiteManager -NounPrefix UniFi -UnwrapProperty data -OutputPath ./out
+
+    Generates a module whose commands return the 'data' property of the API's responses (Get-UniFiHostById
+    returns the host, not the { data, httpStatusCode, traceId } envelope).
 
 .EXAMPLE
     New-OpenApiModule -Path ./api.json -ModuleName Example -NounPrefix Ex -OutputPath ./out -WhatIf
@@ -135,6 +150,10 @@ function New-OpenApiModule {
         [string]$NounPrefix,
 
         [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$UnwrapProperty,
+
+        [Parameter()]
         [version]$ModuleVersion,
 
         [Parameter()]
@@ -164,7 +183,7 @@ function New-OpenApiModule {
             }
 
             $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
-            $option = Resolve-OpenApiGenOption -ModuleName $ModuleName -OutputPath ($PSCmdlet.GetUnresolvedProviderPathFromPSPath($OutputPath)) -NounPrefix $NounPrefix -ModuleVersion $ModuleVersion -Author $Author -GeneratorVersion (Get-OpenApiGenVersion -ModuleRoot $moduleRoot)
+            $option = Resolve-OpenApiGenOption -ModuleName $ModuleName -OutputPath ($PSCmdlet.GetUnresolvedProviderPathFromPSPath($OutputPath)) -NounPrefix $NounPrefix -UnwrapProperty $UnwrapProperty -ModuleVersion $ModuleVersion -Author $Author -GeneratorVersion (Get-OpenApiGenVersion -ModuleRoot $moduleRoot)
             $templates = Get-OpenApiGenTemplate -Path (Join-Path -Path $moduleRoot -ChildPath 'Templates')
             $plan = New-OpenApiGenPlan -Document $Document -Option $option -Template $templates
             $written = @(Write-OpenApiGenPlan -Plan $plan -Force:$Force -WhatIf:$WhatIfPreference)

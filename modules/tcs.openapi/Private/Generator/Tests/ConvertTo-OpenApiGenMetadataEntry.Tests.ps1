@@ -12,10 +12,10 @@ Describe 'ConvertTo-OpenApiGenMetadataEntry' {
     BeforeAll {
         $document = New-TestOpenApiModel -Name petstore
         function Get-TestMetadata {
-            param($Operation, $Document)
-            InModuleScope tcs.openapi -Parameters @{ Operation = $Operation; Document = $Document } {
-                param($Operation, $Document)
-                ConvertTo-OpenApiGenMetadataEntry -Operation $Operation -Document $Document -Service 'PetStore'
+            param($Operation, $Document, [string]$UnwrapProperty)
+            InModuleScope tcs.openapi -Parameters @{ Operation = $Operation; Document = $Document; UnwrapProperty = $UnwrapProperty } {
+                param($Operation, $Document, $UnwrapProperty)
+                ConvertTo-OpenApiGenMetadataEntry -Operation $Operation -Document $Document -Service 'PetStore' -UnwrapProperty $UnwrapProperty
             }
         }
     }
@@ -107,5 +107,53 @@ Describe 'ConvertTo-OpenApiGenMetadataEntry' {
         $create = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'createPets' }
         (Get-TestMetadata -Operation $create -Document $document).RequestContentTypes | Should -Be @('application/json')
         (Get-TestMetadata -Operation $document.Operations[0] -Document $document).Paging.Kind | Should -Be 'nextLink'
+    }
+
+    It 'writes CatchAll only for a catch-all path parameter' {
+        $operation = New-TestOperation -OperationId 'proxy' -Method GET -Path '/c/{id}/{path}' -Parameters @((New-TestParameter -Name 'id' -In path), (New-TestParameter -Name 'path' -In path -CatchAll))
+        $metadata = Get-TestMetadata -Operation $operation -Document $document
+        @($metadata.Parameters[0].Keys) | Should -Be @('Name', 'In', 'Style', 'Explode', 'AllowReserved')
+        @($metadata.Parameters[1].Keys) | Should -Be @('Name', 'In', 'Style', 'Explode', 'AllowReserved', 'CatchAll')
+        $metadata.Parameters[1].CatchAll | Should -BeTrue
+    }
+
+    It 'copies token paging' {
+        $paging = [pscustomobject]@{ PSTypeName = 'Tcs.OpenApi.Paging'; Kind = 'token'; ItemsProperty = 'data'; TokenParameter = 'nextToken'; TokenProperty = 'nextToken' }
+        $page = New-TestSchema -Type object -Properties ([ordered]@{ data = New-TestSchema -Type array -Items (New-TestSchema -Type object -RefName 'Host'); nextToken = New-TestSchema -Type string })
+        $operation = New-TestOperation -OperationId 'listHosts' -Method GET -Path '/hosts' -Paging $paging -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'application/json' -Schema $page))))
+        $metadata = Get-TestMetadata -Operation $operation -Document $document -UnwrapProperty 'data'
+        $metadata.Paging.Kind | Should -Be 'token'
+        $metadata.Paging.TokenParameter | Should -Be 'nextToken'
+        $metadata.ResponseTypeName | Should -Be 'PetStore.Host'
+        # A pageable operation outputs its items already: no UnwrapProperty
+        $metadata.Contains('UnwrapProperty') | Should -BeFalse
+    }
+
+    It 'sets UnwrapProperty and types the unwrapped value when the 2xx JSON object has that property' {
+        $json = 'application/json'
+        $wrapped = New-TestSchema -Type object -Properties ([ordered]@{ data = New-TestSchema -Type object -RefName 'Host'; traceId = New-TestSchema -Type string })
+        $operation = New-TestOperation -OperationId 'getHost' -Method GET -Path '/hosts/{id}' -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $wrapped))))
+        $metadata = Get-TestMetadata -Operation $operation -Document $document -UnwrapProperty 'data'
+        @($metadata.Keys)[-1] | Should -Be 'UnwrapProperty'
+        $metadata.UnwrapProperty | Should -Be 'data'
+        $metadata.ResponseTypeName | Should -Be 'PetStore.Host'
+
+        $list = New-TestSchema -Type object -Properties ([ordered]@{ data = New-TestSchema -Type array -Items (New-TestSchema -Type object -RefName 'Config') })
+        $listOperation = New-TestOperation -OperationId 'listConfigs' -Method GET -Path '/configs' -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $list))))
+        (Get-TestMetadata -Operation $listOperation -Document $document -UnwrapProperty 'data').ResponseTypeName | Should -Be 'PetStore.Config'
+
+        # The wrapper's own name is not used for the unwrapped value
+        $named = New-TestSchema -Type object -RefName 'Envelope' -Properties ([ordered]@{ data = New-TestSchema -Type object })
+        $namedOperation = New-TestOperation -OperationId 'getEnvelope' -Method GET -Path '/e' -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $named))))
+        $namedMetadata = Get-TestMetadata -Operation $namedOperation -Document $document -UnwrapProperty 'data'
+        $namedMetadata.UnwrapProperty | Should -Be 'data'
+        $namedMetadata.ResponseTypeName | Should -BeNullOrEmpty
+    }
+
+    It 'leaves UnwrapProperty out when the response has no such property' {
+        $plain = New-TestSchema -Type object -Properties ([ordered]@{ success = New-TestSchema -Type boolean })
+        $operation = New-TestOperation -OperationId 'post' -Method POST -Path '/p' -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'application/json' -Schema $plain))))
+        (Get-TestMetadata -Operation $operation -Document $document -UnwrapProperty 'data').Contains('UnwrapProperty') | Should -BeFalse
+        (Get-TestMetadata -Operation $document.Operations[1] -Document $document).Contains('UnwrapProperty') | Should -BeFalse
     }
 }

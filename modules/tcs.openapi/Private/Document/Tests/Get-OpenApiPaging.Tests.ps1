@@ -75,4 +75,82 @@ Describe 'Get-OpenApiPaging' {
             & $Paging '{"responses":{"204":{"description":""}}}' | Should -BeNullOrEmpty
         }
     }
+
+    Context 'token paging' {
+        BeforeAll {
+            $script:tokenPaging = InModuleScope tcs.openapi {
+                {
+                    param([string]$Operation)
+                    $context = Get-OpenApiNormalizationContext -Root $null
+                    $raw = ConvertFrom-OpenApiJson -Text $Operation
+                    $responses = ConvertTo-OpenApiResponseList -Context $context -Responses $raw['responses'] -Pointer ''
+                    $parameters = @(foreach ($node in @($raw['parameters'])) {
+                            if ($null -ne $node) {
+                                ConvertTo-OpenApiParameter -Context $context -Node $node -Pointer ''
+                            }
+                        })
+                    Get-OpenApiPaging -Operation $raw -Responses $responses -Parameters $parameters
+                }
+            }
+            $script:tokenJson = {
+                param([string]$Parameter, [string]$Property, [string]$Extra = '')
+                '{"parameters":[{"name":"pageSize","in":"query"},{"name":"' + $Parameter + '","in":"query","schema":{"type":"string"}}],' +
+                '"responses":{"200":{"description":"","content":{"application/json":{"schema":{"type":"object","properties":{"data":{"type":"array","items":{}},"traceId":{"type":"string"},"' + $Property + '":{"type":"string"}' + $Extra + '}}}}}}}'
+            }
+        }
+
+        It 'detects query <Parameter> with response property <Property>' -TestCases @(
+            @{ Parameter = 'nextToken'; Property = 'nextToken' }
+            @{ Parameter = 'pageToken'; Property = 'nextPageToken' }
+            @{ Parameter = 'next_token'; Property = 'next_token' }
+            @{ Parameter = 'page_token'; Property = 'next_page_token' }
+            @{ Parameter = 'cursor'; Property = 'next_cursor' }
+            @{ Parameter = 'Cursor'; Property = 'nextCursor' }
+            @{ Parameter = 'continuationToken'; Property = 'continuationToken' }
+            @{ Parameter = 'continuation_token'; Property = 'continuation_token' }
+            @{ Parameter = 'NEXTTOKEN'; Property = 'nextToken' }
+        ) {
+            InModuleScope tcs.openapi -Parameters @{ Paging = $script:tokenPaging; Json = (& $script:tokenJson $Parameter $Property) ; Parameter = $Parameter; Property = $Property } {
+                param($Paging, $Json, $Parameter, $Property)
+                $result = & $Paging $Json
+                $result.PSObject.TypeNames | Should -Contain 'Tcs.OpenApi.Paging'
+                $result.Kind | Should -Be 'token'
+                $result.ItemsProperty | Should -Be 'data'
+                $result.TokenParameter | Should -BeExactly $Parameter
+                $result.TokenProperty | Should -BeExactly $Property
+            }
+        }
+
+        It 'prefers the property named like the parameter' {
+            InModuleScope tcs.openapi -Parameters @{ Paging = $script:tokenPaging; Json = (& $script:tokenJson 'cursor' 'nextToken' ',"cursor":{"type":"string"}') } {
+                param($Paging, $Json)
+                (& $Paging $Json).TokenProperty | Should -BeExactly 'cursor'
+            }
+        }
+
+        It 'needs the query parameter, one array property and a string token property' {
+            InModuleScope tcs.openapi -Parameters @{ Paging = $script:tokenPaging; Token = $script:tokenJson } {
+                param($Paging, $Token)
+                # No token query parameter
+                & $Paging '{"responses":{"200":{"description":"","content":{"application/json":{"schema":{"properties":{"data":{"type":"array"},"nextToken":{"type":"string"}}}}}}}}' | Should -BeNullOrEmpty
+                # The token parameter is a header
+                & $Paging '{"parameters":[{"name":"nextToken","in":"header"}],"responses":{"200":{"description":"","content":{"application/json":{"schema":{"properties":{"data":{"type":"array"},"nextToken":{"type":"string"}}}}}}}}' | Should -BeNullOrEmpty
+                # Two arrays, no token property, a numeric token
+                & $Paging (& $Token 'nextToken' 'nextToken' ',"more":{"type":"array"}') | Should -BeNullOrEmpty
+                & $Paging (& $Token 'nextToken' 'other') | Should -BeNullOrEmpty
+                & $Paging ((& $Token 'nextToken' 'nextToken').Replace('"nextToken":{"type":"string"}', '"nextToken":{"type":"integer"}')) | Should -BeNullOrEmpty
+            }
+        }
+
+        It 'keeps nextLink detection and x-ms-pageable ahead of token paging' {
+            InModuleScope tcs.openapi -Parameters @{ Paging = $script:tokenPaging; Token = $script:tokenJson } {
+                param($Paging, $Token)
+                (& $Paging (& $Token 'nextToken' 'nextToken' ',"nextLink":{"type":"string"}')).Kind | Should -Be 'nextLink'
+                $pageable = (& $Token 'nextToken' 'nextToken').Replace('{"parameters"', '{"x-ms-pageable":{"nextLinkName":"next","itemName":"data"},"parameters"')
+                $result = & $Paging $pageable
+                $result.Kind | Should -Be 'nextLink'
+                $result.NextLinkProperty | Should -Be 'next'
+            }
+        }
+    }
 }

@@ -95,7 +95,7 @@ function New-OpenApiGenPlan {
         $operation = $supported[$i]
         $name = $resolved.Names[$i]
         $model = Get-OpenApiGenParameterModel -Operation $operation -BaseNoun $name.BaseNoun -Schemas $Document.Schemas
-        $metadata = ConvertTo-OpenApiGenMetadataEntry -Operation $operation -Document $Document -Service $Option.Service
+        $metadata = ConvertTo-OpenApiGenMetadataEntry -Operation $operation -Document $Document -Service $Option.Service -UnwrapProperty ([string]$Option.UnwrapProperty)
         $text = ConvertTo-OpenApiGenFunction -CommandName $name -Operation $operation -ParameterModel $model -ResponseTypeName $metadata.ResponseTypeName -Template $Template['Function.ps1']
         $check = Test-OpenApiGenFunction -Text $text -FunctionName $name.Name
         if (-not $check.IsValid) {
@@ -132,7 +132,8 @@ function New-OpenApiGenPlan {
     }
 
     # Connection commands
-    $connections = @(ConvertTo-OpenApiGenConnection -Prefix $Option.Prefix -Service $Option.Service -ModuleName $Option.ModuleName -Server @($Document.Servers) -Template $Template)
+    $authExample = Get-OpenApiGenAuthExample -Document $Document
+    $connections = @(ConvertTo-OpenApiGenConnection -Prefix $Option.Prefix -Service $Option.Service -ModuleName $Option.ModuleName -Server @($Document.Servers) -AuthExample $authExample -Template $Template)
     foreach ($connection in $connections) {
         $check = Test-OpenApiGenFunction -Text $connection.Text -FunctionName $connection.Name
         if (-not $check.IsValid) {
