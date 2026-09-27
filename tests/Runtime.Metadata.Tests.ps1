@@ -23,7 +23,7 @@ BeforeAll {
     foreach ($property in ($json | ConvertFrom-Json).PSObject.Properties) {
         $script:operations[$property.Name] = $property.Value
     }
-    $secret = ConvertTo-SecureString -String 'fixture-key' -AsPlainText -Force
+    $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'fixture-key').SecurePassword
     Set-OpenApiContext -Service 'Fixture' -BaseUri $script:server.BaseUri -ApiKey $secret -ClientId 'app' -ClientSecret $secret
 }
 

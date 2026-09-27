@@ -20,7 +20,7 @@ Describe 'Select-OpenApiSecurityRequirement' {
                 basic  = @{ Type = 'http'; Scheme = 'basic' }
                 bearer = @{ Type = 'http'; Scheme = 'Bearer' }
             }
-            $script:testContext = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 't' -AsPlainText -Force)
+            $script:testContext = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 't').SecurePassword)
         }
     }
 

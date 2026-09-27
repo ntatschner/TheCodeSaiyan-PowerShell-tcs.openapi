@@ -20,7 +20,7 @@ Describe 'Set-OpenApiContext' {
     }
 
     It 'stores the context in the session and returns it redacted with -PassThru' {
-        $key = ConvertTo-SecureString -String 'my-key' -AsPlainText -Force
+        $key = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'my-key').SecurePassword
         $view = Set-OpenApiContext -Service 'Pets' -BaseUri 'https://pets.example.com/v1/' -ApiKey $key -Header @{ 'X-Tenant' = 'a' } -TimeoutSec 30 -MaxRetries 5 -PassThru
         $view.PSObject.TypeNames[0] | Should -Be 'Tcs.OpenApi.Context'
         $view.BaseUri | Should -Be 'https://pets.example.com/v1'
@@ -40,7 +40,7 @@ Describe 'Set-OpenApiContext' {
     }
 
     It 'replaces an earlier context of the same service' {
-        Set-OpenApiContext -Service 'Pets' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 't' -AsPlainText -Force)
+        Set-OpenApiContext -Service 'Pets' -BaseUri 'https://a' -BearerToken ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 't').SecurePassword)
         Set-OpenApiContext -Service 'Pets' -BaseUri 'https://b'
         $view = Get-OpenApiContext -Service 'Pets'
         $view.BaseUri | Should -Be 'https://b'
@@ -48,7 +48,7 @@ Describe 'Set-OpenApiContext' {
     }
 
     It 'saves secrets with tcs.core and settings as JSON with -Persist' {
-        $secret = ConvertTo-SecureString -String 'client-secret' -AsPlainText -Force
+        $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'client-secret').SecurePassword
         Set-OpenApiContext -Service 'Saved' -BaseUri 'https://a' -ClientId 'app' -ClientSecret $secret -TokenUri 'https://login/token' -Scope 'x.read' -Persist
         $path = Join-Path -Path $env:TCS_CONFIG_ROOT -ChildPath 'tcs.openapi/Contexts/Saved.json'
         Test-Path -LiteralPath $path | Should -BeTrue
@@ -58,7 +58,7 @@ Describe 'Set-OpenApiContext' {
     }
 
     It 'loads a persisted context lazily in a later session' {
-        Set-OpenApiContext -Service 'Later' -BaseUri 'https://later' -BearerToken (ConvertTo-SecureString -String 'tok' -AsPlainText -Force) -Persist
+        Set-OpenApiContext -Service 'Later' -BaseUri 'https://later' -BearerToken ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'tok').SecurePassword) -Persist
         $ModuleRoot = Split-Path -Path $PSScriptRoot -Parent | Split-Path -Parent
         Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'tcs.openapi.psd1') -Force
         InModuleScope -ModuleName tcs.openapi {

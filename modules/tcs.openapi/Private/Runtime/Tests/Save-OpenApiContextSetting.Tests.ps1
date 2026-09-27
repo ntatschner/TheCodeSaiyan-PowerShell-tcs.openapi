@@ -15,7 +15,7 @@ AfterAll {
 Describe 'Save-OpenApiContextSetting' {
     It 'writes settings as JSON without secrets and the secrets with tcs.core' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = New-OpenApiContext -Service 'Disk' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 'very-secret' -AsPlainText -Force) -ClientId 'app'
+            $context = New-OpenApiContext -Service 'Disk' -BaseUri 'https://a' -BearerToken ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'very-secret').SecurePassword) -ClientId 'app'
             Save-OpenApiContextSetting -Context $context
             $path = Get-OpenApiContextSettingPath -Service 'Disk'
             $json = [System.IO.File]::ReadAllText($path)
@@ -31,7 +31,7 @@ Describe 'Save-OpenApiContextSetting' {
 
     It 'removes secrets that the new context no longer has' {
         InModuleScope -ModuleName tcs.openapi {
-            Save-OpenApiContextSetting -Context (New-OpenApiContext -Service 'Swap' -BaseUri 'https://a' -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force))
+            Save-OpenApiContextSetting -Context (New-OpenApiContext -Service 'Swap' -BaseUri 'https://a' -ApiKey ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'k').SecurePassword))
             Save-OpenApiContextSetting -Context (New-OpenApiContext -Service 'Swap' -BaseUri 'https://a')
             { Get-ModuleSecret -ModuleName 'tcs.openapi' -Name 'Swap.ApiKey' -ErrorAction Stop } | Should -Throw
         }

@@ -60,7 +60,7 @@ BeforeAll {
 
     $script:secret = {
         param([string]$Text)
-        ConvertTo-SecureString -String $Text -AsPlainText -Force
+        (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', $Text).SecurePassword
     }
     $script:connect = {
         Set-E2EContext -BaseUri $script:server.BaseUri -BearerToken (& $script:secret 'bearer-1') -ApiKey (& $script:secret 'key-1') -Credential (New-Object System.Management.Automation.PSCredential -ArgumentList 'user', (& $script:secret 'pass')) -MaxRetries 2

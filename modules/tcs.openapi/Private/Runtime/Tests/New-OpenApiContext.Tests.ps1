@@ -29,7 +29,7 @@ Describe 'New-OpenApiContext' {
 
     It 'copies headers as strings and keeps secrets as SecureString' {
         InModuleScope -ModuleName tcs.openapi {
-            $key = ConvertTo-SecureString -String 'k' -AsPlainText -Force
+            $key = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'k').SecurePassword
             $context = New-OpenApiContext -Service 'Svc' -BaseUri 'https://a' -ApiKey $key -Header @{ 'X-Num' = 5 } -Scope @('a', '', 'b')
             $context.ApiKey | Should -BeOfType ([System.Security.SecureString])
             $context.Header['X-Num'] | Should -BeExactly '5'

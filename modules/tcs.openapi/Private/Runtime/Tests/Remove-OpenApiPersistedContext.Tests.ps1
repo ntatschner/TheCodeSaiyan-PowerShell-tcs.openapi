@@ -15,7 +15,7 @@ AfterAll {
 Describe 'Remove-OpenApiPersistedContext' {
     It 'deletes the settings file and the saved secrets' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = New-OpenApiContext -Service 'Gone' -BaseUri 'https://a' -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force)
+            $context = New-OpenApiContext -Service 'Gone' -BaseUri 'https://a' -ApiKey ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'k').SecurePassword)
             Save-OpenApiContextSetting -Context $context
             Remove-OpenApiPersistedContext -Service 'Gone' -Confirm:$false | Should -BeTrue
             Test-Path -LiteralPath (Get-OpenApiContextSettingPath -Service 'Gone') | Should -BeFalse

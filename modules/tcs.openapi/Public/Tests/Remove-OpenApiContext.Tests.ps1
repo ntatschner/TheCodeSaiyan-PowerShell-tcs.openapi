@@ -34,7 +34,7 @@ Describe 'Remove-OpenApiContext' {
     }
 
     It 'deletes saved settings and secrets with -Persisted' {
-        Set-OpenApiContext -Service 'Wiped' -BaseUri 'https://w' -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force) -Persist
+        Set-OpenApiContext -Service 'Wiped' -BaseUri 'https://w' -ApiKey ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'k').SecurePassword) -Persist
         Remove-OpenApiContext -Service 'Wiped' -Persisted -Confirm:$false
         Test-Path -LiteralPath (Join-Path -Path $env:TCS_CONFIG_ROOT -ChildPath 'tcs.openapi/Contexts/Wiped.json') | Should -BeFalse
         { Get-ModuleSecret -ModuleName 'tcs.openapi' -Name 'Wiped.ApiKey' -ErrorAction Stop } | Should -Throw

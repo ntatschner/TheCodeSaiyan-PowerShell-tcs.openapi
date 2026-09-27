@@ -18,7 +18,7 @@ BeforeAll {
         'GET /secret'  = @{ Body = '{"access_token":"abc123","name":"x"}'; ContentType = 'application/json'; Headers = @{ 'Set-Cookie' = 'sid=zzz' } }
         'POST /secret' = @{ Body = '{"ok":true}'; ContentType = 'application/json' }
     }
-    Set-OpenApiContext -Service 'Resp' -BaseUri $script:server.BaseUri -ApiKey (ConvertTo-SecureString -String 'KEY-999' -AsPlainText -Force) -MaxRetries 0
+    Set-OpenApiContext -Service 'Resp' -BaseUri $script:server.BaseUri -ApiKey ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'KEY-999').SecurePassword) -MaxRetries 0
 
     function New-TestOperation {
         param([string]$Path, [string]$Method = 'GET', [string]$TypeName, [switch]$Binary, [switch]$Deprecated, [string]$Id = 'op')

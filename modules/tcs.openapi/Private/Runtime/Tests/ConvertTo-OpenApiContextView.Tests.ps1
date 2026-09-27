@@ -15,7 +15,7 @@ AfterAll {
 Describe 'ConvertTo-OpenApiContextView' {
     It 'shows every secret as ********' {
         InModuleScope -ModuleName tcs.openapi {
-            $secret = ConvertTo-SecureString -String 'plain-secret' -AsPlainText -Force
+            $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'plain-secret').SecurePassword
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'user', $secret
             $context = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -BearerToken $secret -ClientId 'app' -ClientSecret $secret -Credential $credential -ProxyCredential $credential -Header @{ 'X-Api-Token' = 'tok'; 'X-Tenant' = 't1' }
             $view = ConvertTo-OpenApiContextView -Context $context

@@ -15,7 +15,7 @@ AfterAll {
 Describe 'Test-OpenApiSchemeCredential' {
     It 'checks the credential each scheme type needs' {
         InModuleScope -ModuleName tcs.openapi {
-            $secret = ConvertTo-SecureString -String 's' -AsPlainText -Force
+            $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 's').SecurePassword
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', $secret
             $empty = New-OpenApiContext -Service 'S' -BaseUri 'https://a'
             $full = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -Credential $credential -BearerToken $secret

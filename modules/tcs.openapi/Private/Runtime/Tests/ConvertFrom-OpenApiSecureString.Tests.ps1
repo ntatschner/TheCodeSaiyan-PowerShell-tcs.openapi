@@ -15,7 +15,7 @@ AfterAll {
 Describe 'ConvertFrom-OpenApiSecureString' {
     It 'decodes a SecureString and returns $null for $null' {
         InModuleScope -ModuleName tcs.openapi {
-            ConvertFrom-OpenApiSecureString -SecureString (ConvertTo-SecureString -String 'abc' -AsPlainText -Force) | Should -BeExactly 'abc'
+            ConvertFrom-OpenApiSecureString -SecureString ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'abc').SecurePassword) | Should -BeExactly 'abc'
             ConvertFrom-OpenApiSecureString -SecureString $null | Should -BeNullOrEmpty
         }
     }

@@ -21,8 +21,8 @@ Describe 'Import-OpenApiPersistedContext' {
 
     It 'loads the settings and secrets written by Save-OpenApiContextSetting' {
         InModuleScope -ModuleName tcs.openapi {
-            $secret = ConvertTo-SecureString -String 'key-1' -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', (ConvertTo-SecureString -String 'pw' -AsPlainText -Force)
+            $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'key-1').SecurePassword
+            $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'pw').SecurePassword)
             $context = New-OpenApiContext -Service 'Saved' -BaseUri 'https://a/v2' -ApiKey $secret -Credential $credential -ClientId 'app' -TokenUri 'https://t' -Scope 's1' -Header @{ 'X-T' = '1' } -TimeoutSec 7 -MaxRetries 1 -Proxy 'http://p:1/' -SkipCertificateCheck $true
             Save-OpenApiContextSetting -Context $context
             $loaded = Import-OpenApiPersistedContext -Service 'Saved'
@@ -45,7 +45,7 @@ Describe 'Import-OpenApiPersistedContext' {
 
     It 'warns and continues when a saved secret cannot be read' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = New-OpenApiContext -Service 'Broken' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 't' -AsPlainText -Force)
+            $context = New-OpenApiContext -Service 'Broken' -BaseUri 'https://a' -BearerToken ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 't').SecurePassword)
             Save-OpenApiContextSetting -Context $context
             Remove-ModuleSecret -ModuleName 'tcs.openapi' -Name 'Broken.BearerToken' -Confirm:$false
             $warnings = $null

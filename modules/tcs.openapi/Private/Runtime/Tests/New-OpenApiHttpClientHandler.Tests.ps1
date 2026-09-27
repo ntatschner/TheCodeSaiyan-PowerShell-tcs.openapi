@@ -26,7 +26,7 @@ Describe 'New-OpenApiHttpClientHandler' {
 
     It 'sets the proxy with its credential' {
         InModuleScope -ModuleName tcs.openapi {
-            $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'proxyuser', (ConvertTo-SecureString -String 'pw' -AsPlainText -Force)
+            $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'proxyuser', ((New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'pw').SecurePassword)
             $handler = New-OpenApiHttpClientHandler -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -Proxy 'http://proxy.local:8080/' -ProxyCredential $credential)
             $handler.UseProxy | Should -BeTrue
             $handler.Proxy.Address.AbsoluteUri | Should -Be 'http://proxy.local:8080/'

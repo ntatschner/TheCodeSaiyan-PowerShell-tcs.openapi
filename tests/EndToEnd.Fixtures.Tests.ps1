@@ -49,7 +49,7 @@ BeforeAll {
     $script:outputRoot = Join-Path -Path $TestDrive -ChildPath 'generated'
     $script:secret = {
         param([string]$Text)
-        ConvertTo-SecureString -String $Text -AsPlainText -Force
+        (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', $Text).SecurePassword
     }
 }
 

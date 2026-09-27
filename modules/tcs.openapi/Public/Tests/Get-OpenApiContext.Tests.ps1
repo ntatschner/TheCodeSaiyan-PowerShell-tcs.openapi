@@ -14,7 +14,7 @@ AfterAll {
 
 Describe 'Get-OpenApiContext' {
     BeforeAll {
-        $secret = ConvertTo-SecureString -String 'top-secret' -AsPlainText -Force
+        $secret = (New-Object -TypeName System.Net.NetworkCredential -ArgumentList '', 'top-secret').SecurePassword
         $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'alice', $secret
         Set-OpenApiContext -Service 'Alpha' -BaseUri 'https://alpha' -ApiKey $secret -Credential $credential -BearerToken $secret -ClientId 'app' -ClientSecret $secret -Header @{ Authorization = 'x'; 'X-Plain' = 'p' }
         Set-OpenApiContext -Service 'Beta' -BaseUri 'https://beta'
