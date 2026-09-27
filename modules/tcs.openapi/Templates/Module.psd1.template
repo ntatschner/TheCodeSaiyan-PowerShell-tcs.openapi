@@ -1,0 +1,24 @@
+@{
+    RootModule           = '{{ModuleName}}.psm1'
+    ModuleVersion        = '{{ModuleVersion}}'
+    GUID                 = '{{Guid}}'
+    Author               = {{AuthorLiteral}}
+    Copyright            = {{CopyrightLiteral}}
+    Description          = {{DescriptionLiteral}}
+    CompatiblePSEditions = @('Desktop', 'Core')
+    PowerShellVersion    = '5.1'
+    RequiredModules      = @(
+        @{ ModuleName = 'tcs.openapi'; ModuleVersion = '{{GeneratorVersion}}' }
+    )
+    FunctionsToExport    = @(
+{{FunctionsToExport}}
+    )
+    CmdletsToExport      = @()
+    VariablesToExport    = @()
+    AliasesToExport      = @()
+    PrivateData          = @{
+        PSData = @{
+            Tags = @('OpenAPI', 'REST', 'API', 'tcs.openapi')
+        }
+    }
+}
