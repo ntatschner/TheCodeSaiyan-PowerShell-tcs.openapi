@@ -84,13 +84,13 @@
 
 .EXAMPLE
     $document = Import-OpenApiDocument -Uri 'https://api.example.com/openapi.json'
-    $result = New-OpenApiModule -Document $document -ModuleName Example -OutputPath ./out -Force
+    $result = New-OpenApiModule -Document $document -ModuleName Example -NounPrefix Ex -OutputPath ./out -Force
     $result.Findings | Where-Object Severity -NE 'Information'
 
     Regenerates a module from a downloaded document and lists the warnings and errors.
 
 .EXAMPLE
-    New-OpenApiModule -Path ./api.json -ModuleName Example -OutputPath ./out -WhatIf
+    New-OpenApiModule -Path ./api.json -ModuleName Example -NounPrefix Ex -OutputPath ./out -WhatIf
 
     Shows the files that would be written.
 

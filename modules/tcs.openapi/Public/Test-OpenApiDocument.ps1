@@ -58,7 +58,7 @@
     Author: Nigel Tatschner
     Company: TheCodeSaiyan
 
-    New-OpenApiModule adds generator findings (OA040, OA041, OA070) to these.
+    New-OpenApiModule adds generator findings (OA040, OA041, OA042, OA070) to these.
 
 .LINK
     Import-OpenApiDocument
