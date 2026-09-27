@@ -20,7 +20,9 @@ function ConvertTo-OpenApiGenReadme {
         [AllowEmptyCollection()]
         [object[]]$Function,
 
+        # Empty when the document has no security scheme and has a default server
         [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [string]$ConnectExample,
 
         [Parameter(Mandatory = $true)]

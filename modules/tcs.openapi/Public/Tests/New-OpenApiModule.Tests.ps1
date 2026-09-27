@@ -145,6 +145,15 @@ Describe 'New-OpenApiModule' {
         }
     }
 
+    It 'generates a module for a document with a default server and no security scheme' {
+        $text = '{"openapi":"3.0.3","info":{"title":"Open","version":"1"},"servers":[{"url":"https://api.example.test"}],"paths":{"/items":{"get":{"operationId":"listItems","responses":{"200":{"description":"ok"}}}}}}'
+        $document = Import-OpenApiDocument -InputObject $text
+        $result = New-OpenApiModule -Document $document -ModuleName 'Open' -OutputPath $out -NounPrefix 'Open'
+        $result.Functions.Name | Should -Contain 'Get-OpenItem'
+        $readme = Get-Content -LiteralPath (Join-Path -Path $result.Path -ChildPath 'README.md') -Raw
+        $readme | Should -Match '(?m)^Set-OpenContext\r?$'
+    }
+
     It 'rejects an object that is not a document model' {
         { New-OpenApiModule -Document ([pscustomobject]@{ Title = 'x' }) -ModuleName 'X' -OutputPath $out -ErrorAction Stop } | Should -Throw '*no Operations*'
     }
