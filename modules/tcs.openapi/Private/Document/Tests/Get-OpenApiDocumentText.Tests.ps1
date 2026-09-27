@@ -15,10 +15,10 @@ Describe 'Get-OpenApiDocumentText' {
         }
     }
 
-    It 'marks .yaml files as YAML' {
+    It 'detects the format of other files from their content' {
         InModuleScope tcs.openapi -Parameters @{ Fixtures = $script:fixtures } {
             param($Fixtures)
-            (Get-OpenApiDocumentText -Path (Join-Path -Path $Fixtures -ChildPath 'document-petstore-3.0.yaml')).Format | Should -Be 'Yaml'
+            (Get-OpenApiDocumentText -Path (Join-Path -Path $Fixtures -ChildPath 'document-petstore-3.0.yaml')).Format | Should -Be 'Auto'
         }
     }
 

@@ -5,7 +5,8 @@ function Get-OpenApiDocumentText {
     .DESCRIPTION
         Files are read with BOM detection (UTF-8 default). URLs are downloaded with Invoke-WebRequest and
         decoded as UTF-8 from the raw bytes, so Windows PowerShell 5.1 does not fall back to ISO-8859-1.
-        Format is 'Yaml' for .yaml/.yml files and 'Auto' otherwise.
+        Format is 'Json' for .json files and 'Auto' (detected from the content) otherwise, so a .yaml file
+        that holds JSON does not need powershell-yaml.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -29,11 +30,7 @@ function Get-OpenApiDocumentText {
                 throw "The path '$Path' is not a file."
             }
             $format = 'Auto'
-            $extension = [System.IO.Path]::GetExtension($fullPath)
-            if ($extension -eq '.yaml' -or $extension -eq '.yml') {
-                $format = 'Yaml'
-            }
-            elseif ($extension -eq '.json') {
+            if ([System.IO.Path]::GetExtension($fullPath) -eq '.json') {
                 $format = 'Json'
             }
             $text = [System.IO.File]::ReadAllText($fullPath, [System.Text.Encoding]::UTF8)

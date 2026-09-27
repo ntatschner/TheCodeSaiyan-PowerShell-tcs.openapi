@@ -84,6 +84,13 @@ Describe 'Import-OpenApiDocument' {
     }
 
     Context 'YAML' {
+        It 'reads a .yaml file that holds JSON without powershell-yaml' {
+            Mock -ModuleName tcs.openapi Get-OpenApiYamlConverter { }
+            $path = Join-Path -Path $TestDrive -ChildPath 'json-in.yaml'
+            Copy-Item -Path $script:petstoreJson -Destination $path
+            (Import-OpenApiDocument -Path $path).Title | Should -Be 'Petstore'
+        }
+
         It 'throws a clear error when powershell-yaml is not available' {
             Mock -ModuleName tcs.openapi Get-OpenApiYamlConverter { }
             $thrown = $null
