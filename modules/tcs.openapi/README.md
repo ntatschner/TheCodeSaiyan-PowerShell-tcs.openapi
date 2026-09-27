@@ -2,7 +2,7 @@
 
 Generates PowerShell modules from OpenAPI 3.0/3.1 and Swagger 2.0 documents, and is the request engine those
 modules use (authentication, parameter serialisation, request bodies, retry, paging, errors and downloads).
-Runs on Windows PowerShell 5.1 and PowerShell 7; requires tcs.core 0.4.0.
+Runs on Windows PowerShell 5.1 and PowerShell 7; requires tcs.core 0.4.1.
 
 ```powershell
 New-OpenApiModule -Path ./petstore.json -ModuleName PetStore -NounPrefix PetStore -OutputPath ./out

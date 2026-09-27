@@ -14,11 +14,11 @@ Publishing uses the shared workflows in
 
 1. **PowerShell Gallery API key** with the "Push new packages and package versions" scope for `tcs.openapi`.
 2. **Repository secret** `PSGALLERY_API_KEY` (Settings -> Secrets and variables -> Actions) holding that key.
-3. **tcs.core 0.4.0 or later on the PowerShell Gallery.** tcs.openapi declares
-   `RequiredModules = @(@{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.0' })`. The Gallery refuses a module whose
+3. **tcs.core 0.4.1 or later on the PowerShell Gallery.** tcs.openapi declares
+   `RequiredModules = @(@{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.1' })`. The Gallery refuses a module whose
    required modules it does not have, and every CI job that imports tcs.openapi installs tcs.core first (the Pester
-   jobs install exactly 0.4.0; the shared validate workflow's "Resolve RequiredModules" step installs the latest).
-   tcs.core 0.4.0 is already published.
+   jobs install exactly 0.4.1; the shared validate workflow's "Resolve RequiredModules" step installs the latest).
+   tcs.core 0.4.1 is already published.
 
 ## Releasing a version
 
@@ -46,5 +46,5 @@ creates the `v0.2.0` tag and the tag starts `publish-to-psgallery.yml`. To publi
 |---|---|
 | "API key invalid" | Check the secret name `PSGALLERY_API_KEY`, its scope and expiry |
 | "Version already exists" | Raise `ModuleVersion` in `tcs.openapi.psd1` |
-| Import fails in CI with a missing tcs.core | tcs.core 0.4.0 is not on the Gallery, or the install step failed |
+| Import fails in CI with a missing tcs.core | tcs.core 0.4.1 is not on the Gallery, or the install step failed |
 | PSScriptAnalyzer failures | Run `./Build.ps1 -Task Validate` locally and fix the findings |

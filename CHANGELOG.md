@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-27
+
+### Changed
+
+- Requires tcs.core 0.4.1 or later.
+- Telemetry: `Get-OpenApiContext`, `Set-OpenApiContext`, `Remove-OpenApiContext`,
+  `Import-OpenApiDocument`, `New-OpenApiModule` and `Test-OpenApiDocument` record their run with
+  `Start-TcsTelemetry` / `Complete-TcsTelemetry` directly instead of through `Invoke-TcsCommand`,
+  which tcs.core 0.5.0 removes. Their errors and warnings now come from the command itself: error
+  IDs end in the command's name (for example `OpenApi.ContextNotFound,Get-OpenApiContext` instead
+  of `,Invoke-TcsCommand`), and `-ErrorVariable` (also with `-ErrorAction SilentlyContinue`),
+  `-WarningVariable` and `-InformationVariable` collect them.
+- A pipeline into `Import-OpenApiDocument` or `Test-OpenApiDocument` that a later command stops
+  (for example `Select-Object -First`) still records its telemetry.
+
 ## [0.2.0] - 2026-09-27
 
 ### Added

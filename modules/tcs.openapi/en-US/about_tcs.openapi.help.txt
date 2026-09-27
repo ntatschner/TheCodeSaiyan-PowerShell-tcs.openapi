@@ -20,7 +20,7 @@ LONG DESCRIPTION
     tcs.openapi fixes every generated module without regenerating it.
 
     Both halves run on Windows PowerShell 5.1 and PowerShell 7 (Windows,
-    Linux and macOS). tcs.openapi requires tcs.core 0.4.0.
+    Linux and macOS). tcs.openapi requires tcs.core 0.4.1.
 
 QUICK START
     Check the document, generate a module, import it and call it:

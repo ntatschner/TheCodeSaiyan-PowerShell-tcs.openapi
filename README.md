@@ -18,10 +18,10 @@ It replaces the Swagger generator that used to live in tcs.utils. The architectu
 ## Install
 
 ```powershell
-Install-Module tcs.openapi -Scope CurrentUser   # also installs its RequiredModule tcs.core (0.4.0 or later)
+Install-Module tcs.openapi -Scope CurrentUser   # also installs its RequiredModule tcs.core (0.4.1 or later)
 ```
 
-Requirements: Windows PowerShell 5.1 or PowerShell 7 (Windows, Linux, macOS) and tcs.core 0.4.0. YAML
+Requirements: Windows PowerShell 5.1 or PowerShell 7 (Windows, Linux, macOS) and tcs.core 0.4.1. YAML
 documents need [powershell-yaml](https://www.powershellgallery.com/packages/powershell-yaml)
 (`ConvertFrom-Yaml`); JSON needs nothing else.
 

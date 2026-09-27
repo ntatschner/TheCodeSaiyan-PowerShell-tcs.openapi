@@ -7,7 +7,7 @@
     and writes each generated module to tests/Snapshots/<Name>/<ModuleName>, replacing what is there.
     Run it after a deliberate change to the generator or its templates, review the diff and commit
     it with the change. tests/Generator.Snapshot.Tests.ps1 compares fresh output with these files.
-    Needs tcs.core 0.4.0 on PSModulePath. Works without Build.ps1.
+    Needs tcs.core 0.4.1 on PSModulePath. Works without Build.ps1.
 
 .EXAMPLE
     ./tests/Helpers/Update-Snapshots.ps1

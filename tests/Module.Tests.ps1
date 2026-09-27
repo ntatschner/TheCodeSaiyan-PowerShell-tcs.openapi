@@ -46,11 +46,11 @@ Describe 'tcs.openapi manifest and import' {
         $manifest.Version | Should -Not -BeNullOrEmpty
     }
 
-    It 'requires tcs.core 0.4.0 and System.Net.Http' {
+    It 'requires tcs.core 0.4.1 and System.Net.Http' {
         $data = Import-PowerShellDataFile -Path $ManifestPath
         $data.RequiredModules | Should -HaveCount 1
         $data.RequiredModules[0].ModuleName | Should -Be 'tcs.core'
-        $data.RequiredModules[0].ModuleVersion | Should -Be '0.4.0'
+        $data.RequiredModules[0].ModuleVersion | Should -Be '0.4.1'
         $data.RequiredAssemblies | Should -Contain 'System.Net.Http'
         $data.PowerShellVersion | Should -Be '5.1'
         $data.CompatiblePSEditions | Should -Be @('Desktop', 'Core')

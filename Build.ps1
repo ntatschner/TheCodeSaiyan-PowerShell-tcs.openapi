@@ -52,7 +52,7 @@ param(
 $ModuleName = 'tcs.openapi'
 $ModulePath = Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath 'modules') -ChildPath $ModuleName
 $PesterVersion = '5.7.1'
-$TcsCoreVersion = '0.4.0'
+$TcsCoreVersion = '0.4.1'
 $ManifestPath = Join-Path $ModulePath "$ModuleName.psd1"
 # PSScriptAnalyzer covers the module, the test helpers and the CI scripts (not the Pester files)
 $AnalyzerPaths = @($ModulePath, (Join-Path $PSScriptRoot 'tests/Helpers'), (Join-Path $PSScriptRoot '.github/scripts'))

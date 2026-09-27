@@ -5,7 +5,7 @@
 .DESCRIPTION
     Imports the module from the repository, checks that the exports match the manifest, imports a tiny
     inline OpenAPI document, validates it and runs New-OpenApiModule -WhatIf (which must write nothing).
-    Needs tcs.core 0.4.0 or later (the RequiredModule) to be installed. Offline and side-effect free.
+    Needs tcs.core 0.4.1 or later (the RequiredModule) to be installed. Offline and side-effect free.
 #>
 [CmdletBinding()]
 param()
