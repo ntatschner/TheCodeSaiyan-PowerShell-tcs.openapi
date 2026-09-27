@@ -266,11 +266,21 @@ function Invoke-OpenApiRequest {
         if ([string]::IsNullOrEmpty($bodyContentType)) {
             $bodyContentType = 'application/json'
         }
-        if ($Body -is [System.IO.Stream] -and -not $Body.CanSeek) {
-            # A retry must be able to send the body again
+        if ($Body -is [System.IO.Stream]) {
+            # Read the stream once: every attempt then sends the same bytes, and the caller's stream is never
+            # handed to HttpClient (on .NET Framework HttpClient disposes the request content, and so the stream)
+            $startPosition = $null
+            if ($Body.CanSeek) {
+                $startPosition = $Body.Position
+                $Body.Position = 0
+            }
             $buffer = New-Object System.IO.MemoryStream
             $Body.CopyTo($buffer)
-            $Body = $buffer
+            if ($null -ne $startPosition) {
+                $Body.Position = $startPosition
+            }
+            $Body = $buffer.ToArray()
+            $buffer.Dispose()
         }
         # A new HttpContent is built for every attempt (a sent request cannot be sent again)
         $contentFactory = { New-OpenApiHttpContent -Body $Body -ContentType $bodyContentType }

@@ -59,7 +59,7 @@ Describe 'Invoke-OpenApiRequest parameter serialisation (end to end)' {
         }
         $null = Invoke-OpenApiRequest -Service 'Ser' -Operation $script:operation -PathParameters @{ id = 1; parts = 'p' } -QueryParameters $query
         # System.Uri escapes '|' as %7C on .NET Core; both mean the same
-        $script:server.Requests[0].Query.Replace('%7C', '|') | Should -Be '?tags=red&tags=green&ids=1,2,3&spaced=a%20b&piped=a|b&filter[status]=open&filter[owner]=me&raw=a/b?c&flag=true&since=2024-01-02T03%3A04%3A05.0000000Z'
+        $script:server.Requests[0].Query.Replace('%7C', '|') | Should -Be '?tags=red&tags=green&ids=1,2,3&spaced=a%20b&piped=a|b&filter%5Bstatus%5D=open&filter%5Bowner%5D=me&raw=a/b?c&flag=true&since=2024-01-02T03%3A04%3A05.0000000Z'
     }
 
     It 'sends only the query parameters that were passed' {

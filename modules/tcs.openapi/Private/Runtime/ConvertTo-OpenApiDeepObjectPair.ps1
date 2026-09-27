@@ -1,7 +1,8 @@
 function ConvertTo-OpenApiDeepObjectPair {
     <#
     .SYNOPSIS
-        Flattens an object into deepObject query pairs (name[key]=value, nested as name[a][b]=value, arrays repeated).
+        Flattens an object into deepObject query pairs (name%5Bkey%5D=value, i.e. name[key]=value with the brackets
+        percent-encoded; nested as name[a][b]=value, arrays repeated).
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -20,7 +21,9 @@ function ConvertTo-OpenApiDeepObjectPair {
     $shape = Get-OpenApiValueShape -Value $Value
     if ($shape -eq 'Object') {
         foreach ($pair in (ConvertTo-OpenApiPropertyList -InputObject $Value)) {
-            $key = $Prefix + '[' + (ConvertTo-OpenApiUriEncoded -Value $pair.Name) + ']'
+            # The brackets are percent-encoded (RFC 3986 allows them unencoded only in the host); .NET Framework
+            # would encode them anyway, so both editions send the same query
+            $key = $Prefix + '%5B' + (ConvertTo-OpenApiUriEncoded -Value $pair.Name) + '%5D'
             ConvertTo-OpenApiDeepObjectPair -Prefix $key -Value $pair.Value -AllowReserved:$AllowReserved
         }
         return

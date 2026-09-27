@@ -45,6 +45,21 @@ Describe 'Invoke-OpenApiRequest' {
         $script:server.Requests[0].Headers['Accept'] | Should -Be 'application/xml, text/csv'
     }
 
+    It 'reads a stream body once and never hands the caller''s stream to the HTTP layer' {
+        # On .NET Framework HttpClient disposes the request content, so a stream passed through would be closed
+        Mock -ModuleName tcs.openapi -CommandName New-OpenApiHttpContent -MockWith {
+            New-Object System.Net.Http.ByteArrayContent -ArgumentList (, [byte[]]$Body)
+        }
+        $stream = New-Object System.IO.MemoryStream -ArgumentList (, [byte[]](1, 2, 3))
+        $stream.Position = 2
+        $null = Invoke-OpenApiRequest -Service 'Direct' -Operation @{ Path = '/x'; Method = 'PUT'; RequestContentTypes = @('application/octet-stream') } -Body $stream
+        Should -Invoke -ModuleName tcs.openapi -CommandName New-OpenApiHttpContent -Times 1 -Exactly -ParameterFilter { $Body -is [byte[]] }
+        $script:server.Requests[0].BodyBytes | Should -Be ([byte[]](1, 2, 3))
+        $stream.CanRead | Should -BeTrue
+        $stream.Position | Should -Be 2
+        $stream.Dispose()
+    }
+
     It 'writes an error when no service name is known' {
         { Invoke-OpenApiRequest -Operation @{ Path = '/x' } -ErrorAction Stop } | Should -Throw -ErrorId 'OpenApi.MissingService*'
     }

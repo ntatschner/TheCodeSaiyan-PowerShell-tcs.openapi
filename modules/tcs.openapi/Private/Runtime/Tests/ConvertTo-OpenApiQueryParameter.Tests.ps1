@@ -28,7 +28,7 @@ Describe 'ConvertTo-OpenApiQueryParameter' {
         @{ Style = 'spaceDelimited'; Explode = $false; Kind = 'object'; Expected = 'color=R%20100%20G%20200%20B%20150' }
         @{ Style = 'pipeDelimited'; Explode = $false; Kind = 'array'; Expected = 'color=blue|black|brown' }
         @{ Style = 'pipeDelimited'; Explode = $false; Kind = 'object'; Expected = 'color=R|100|G|200|B|150' }
-        @{ Style = 'deepObject'; Explode = $true; Kind = 'object'; Expected = 'color[R]=100&color[G]=200&color[B]=150' }
+        @{ Style = 'deepObject'; Explode = $true; Kind = 'object'; Expected = 'color%5BR%5D=100&color%5BG%5D=200&color%5BB%5D=150' }  # the spec shows color[R]=100; brackets are percent-encoded so both editions send the same query
     ) {
         $values = @{
             empty  = $null
@@ -73,7 +73,7 @@ Describe 'ConvertTo-OpenApiQueryParameter' {
     It 'nests deepObject values and repeats arrays' {
         InModuleScope -ModuleName tcs.openapi {
             $value = [ordered]@{ a = [ordered]@{ b = 1 }; tags = @('x', 'y') }
-            (ConvertTo-OpenApiQueryParameter -Name 'f' -Value $value -Style 'deepObject' -Explode) -join '&' | Should -BeExactly 'f[a][b]=1&f[tags]=x&f[tags]=y'
+            (ConvertTo-OpenApiQueryParameter -Name 'f' -Value $value -Style 'deepObject' -Explode) -join '&' | Should -BeExactly 'f%5Ba%5D%5Bb%5D=1&f%5Btags%5D=x&f%5Btags%5D=y'
         }
     }
 

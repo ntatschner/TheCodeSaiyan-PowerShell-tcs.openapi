@@ -183,7 +183,7 @@ Describe 'End to end: generated E2E module against a live test server' {
             $pairs | Should -Contain 'tags=b'
             $pairs | Should -Contain 'ids=1,2'
             $pairs | Should -Contain 'codes=x%7Cy'
-            $pairs | Should -Contain 'filter[color]=red'
+            $pairs | Should -Contain 'filter%5Bcolor%5D=red'
             $pairs | Should -Contain 'includeArchived=true'
             $pairs | Should -Contain 'since=2020-01-02T03%3A04%3A05.0000000Z'
             $pairs.Count | Should -Be 7

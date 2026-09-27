@@ -16,13 +16,13 @@ Describe 'ConvertTo-OpenApiDeepObjectPair' {
     It 'flattens nested objects and repeats arrays' {
         InModuleScope -ModuleName tcs.openapi {
             $value = [ordered]@{ a = 1; b = [ordered]@{ c = 'x y' }; d = @(1, 2) }
-            @(ConvertTo-OpenApiDeepObjectPair -Prefix 'f' -Value $value) | Should -Be @('f[a]=1', 'f[b][c]=x%20y', 'f[d]=1', 'f[d]=2')
+            @(ConvertTo-OpenApiDeepObjectPair -Prefix 'f' -Value $value) | Should -Be @('f%5Ba%5D=1', 'f%5Bb%5D%5Bc%5D=x%20y', 'f%5Bd%5D=1', 'f%5Bd%5D=2')
         }
     }
 
     It 'honours allowReserved for values' {
         InModuleScope -ModuleName tcs.openapi {
-            @(ConvertTo-OpenApiDeepObjectPair -Prefix 'f' -Value @{ p = 'a/b' } -AllowReserved) | Should -Be @('f[p]=a/b')
+            @(ConvertTo-OpenApiDeepObjectPair -Prefix 'f' -Value @{ p = 'a/b' } -AllowReserved) | Should -Be @('f%5Bp%5D=a/b')
         }
     }
 }
