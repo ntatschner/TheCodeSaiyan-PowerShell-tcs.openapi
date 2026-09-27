@@ -113,6 +113,10 @@ function Send-OpenApiHttpRequest {
         }
     }
     finally {
+        if ($null -ne $request.Content -and $null -ne $request.Content.PSObject.Properties['TcsOpenApiKeepOpen']) {
+            # The content wraps the caller's stream: do not let the request dispose it
+            $request.Content = $null
+        }
         $request.Dispose()
     }
 }

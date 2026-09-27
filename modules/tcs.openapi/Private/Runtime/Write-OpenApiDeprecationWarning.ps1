@@ -1,7 +1,7 @@
 function Write-OpenApiDeprecationWarning {
     <#
     .SYNOPSIS
-        Writes a warning that an operation is deprecated, once per service and operation per session.
+        Writes a warning that an operation is deprecated, once per service and operation per session (through -Cmdlet when given).
     #>
     [CmdletBinding()]
     [OutputType([void])]
@@ -10,7 +10,11 @@ function Write-OpenApiDeprecationWarning {
         [string]$Service,
 
         [Parameter(Mandatory)]
-        [string]$OperationId
+        [string]$OperationId,
+
+        [Parameter()]
+        [AllowNull()]
+        [System.Management.Automation.PSCmdlet]$Cmdlet
     )
 
     $warned = Get-OpenApiModuleState -Name 'TcsOpenApiDeprecationWarned'
@@ -19,5 +23,12 @@ function Write-OpenApiDeprecationWarning {
         return
     }
     $warned[$key] = $true
-    Write-Warning -Message "The operation '$OperationId' of the '$Service' API is deprecated and may be removed in a later version of the API."
+    $message = "The operation '$OperationId' of the '$Service' API is deprecated and may be removed in a later version of the API."
+    if ($null -ne $Cmdlet) {
+        # Written through the calling command, so its -WarningAction and -WarningVariable apply
+        $Cmdlet.WriteWarning($message)
+    }
+    else {
+        Write-Warning -Message $message
+    }
 }

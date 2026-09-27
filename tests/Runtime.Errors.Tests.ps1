@@ -4,6 +4,8 @@ BeforeAll {
     $env:TCS_TELEMETRY_OPTOUT = '1'
     $repoRoot = Split-Path -Path $PSScriptRoot -Parent
     Import-Module -Name (Join-Path -Path $repoRoot -ChildPath 'modules/tcs.openapi/tcs.openapi.psd1') -Force
+    # Windows PowerShell 5.1 does not load System.Net.Http by default
+    Add-Type -AssemblyName 'System.Net.Http'
     . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers/TestHttpServer.ps1')
     $script:server = Start-TestHttpServer -Handler {
         param($Request)

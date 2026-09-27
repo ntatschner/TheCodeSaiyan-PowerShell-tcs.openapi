@@ -10,6 +10,7 @@ function Get-OpenApiHttpClient {
         [pscustomobject]$Context
     )
 
+    Import-OpenApiHttpAssembly
     $cache = Get-OpenApiModuleState -Name 'TcsOpenApiHttpClients'
     $proxyUser = $null
     if ($null -ne $Context.ProxyCredential) {

@@ -1,5 +1,7 @@
 BeforeAll {
     . (Join-Path -Path $PSScriptRoot -ChildPath 'TestHttpServer.ps1')
+    # Windows PowerShell 5.1 does not load System.Net.Http by default
+    Add-Type -AssemblyName 'System.Net.Http'
 }
 
 Describe 'Start-TestHttpServer' {

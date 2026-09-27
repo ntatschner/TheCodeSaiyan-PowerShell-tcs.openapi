@@ -59,7 +59,7 @@ function Build-OpenApiHttpContent {
             return $content
         }
         default {
-            $content = Build-OpenApiBinaryContent -Value $Body
+            $content = Build-OpenApiBinaryContent -Value $Body -KeepStreamOpen
             $content.Headers.ContentType = $mediaType
             return $content
         }

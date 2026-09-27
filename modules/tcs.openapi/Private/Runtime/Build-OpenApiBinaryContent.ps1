@@ -1,14 +1,17 @@
 function Build-OpenApiBinaryContent {
     <#
     .SYNOPSIS
-        Creates HttpContent from a byte array, a stream, a FileInfo or text (sent as UTF-8 bytes).
+        Creates HttpContent from a byte array, a stream, a FileInfo or text (sent as UTF-8 bytes); -KeepStreamOpen sends a seekable stream without copying or closing it.
     #>
     [CmdletBinding()]
     [OutputType([System.Net.Http.HttpContent])]
     param(
         [Parameter()]
         [AllowNull()]
-        [object]$Value
+        [object]$Value,
+
+        [Parameter()]
+        [switch]$KeepStreamOpen
     )
 
     if ($Value -is [System.Management.Automation.PSObject]) {
@@ -32,7 +35,14 @@ function Build-OpenApiBinaryContent {
         if ($Value.CanSeek) {
             $Value.Position = 0
         }
-        # Wrap so that disposing the request does not close the caller's stream
+        if ($KeepStreamOpen -and $Value.CanSeek) {
+            # Sent straight from the caller's stream; Send-OpenApiHttpRequest detaches this content before
+            # disposing the request, so the stream stays open and can be rewound for a retry
+            $content = New-Object System.Net.Http.StreamContent -ArgumentList $Value
+            Add-Member -InputObject $content -NotePropertyName 'TcsOpenApiKeepOpen' -NotePropertyValue $true
+            return $content
+        }
+        # Copy so that disposing the request does not close the caller's stream
         $buffer = New-Object System.IO.MemoryStream
         $Value.CopyTo($buffer)
         $buffer.Position = 0

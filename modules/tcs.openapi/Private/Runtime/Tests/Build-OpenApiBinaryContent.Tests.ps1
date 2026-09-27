@@ -4,6 +4,8 @@ BeforeAll {
     $env:TCS_TELEMETRY_OPTOUT = '1'
     $ModuleRoot = Split-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -Parent
     Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'tcs.openapi.psd1') -Force
+    # Windows PowerShell 5.1 does not load System.Net.Http by default
+    Add-Type -AssemblyName 'System.Net.Http'
 }
 
 AfterAll {
@@ -28,6 +30,17 @@ Describe 'Build-OpenApiBinaryContent' {
 
             [System.Text.Encoding]::UTF8.GetString((Build-OpenApiBinaryContent -Value 'hi').ReadAsByteArrayAsync().GetAwaiter().GetResult()) | Should -Be 'hi'
             (Build-OpenApiBinaryContent -Value $null).ReadAsByteArrayAsync().GetAwaiter().GetResult().Length | Should -Be 0
+        }
+    }
+
+    It 'sends a seekable stream from its start without copying it with -KeepStreamOpen' {
+        InModuleScope -ModuleName tcs.openapi {
+            $stream = New-Object System.IO.MemoryStream -ArgumentList (, [byte[]](1, 2, 3))
+            $stream.Position = 2
+            $content = Build-OpenApiBinaryContent -Value $stream -KeepStreamOpen
+            $content | Should -BeOfType ([System.Net.Http.StreamContent])
+            $content.PSObject.Properties['TcsOpenApiKeepOpen'] | Should -Not -BeNullOrEmpty
+            $content.ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be ([byte[]](1, 2, 3))
         }
     }
 

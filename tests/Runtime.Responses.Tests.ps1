@@ -4,6 +4,8 @@ BeforeAll {
     $env:TCS_TELEMETRY_OPTOUT = '1'
     $repoRoot = Split-Path -Path $PSScriptRoot -Parent
     Import-Module -Name (Join-Path -Path $repoRoot -ChildPath 'modules/tcs.openapi/tcs.openapi.psd1') -Force
+    # Windows PowerShell 5.1 does not load System.Net.Http by default
+    Add-Type -AssemblyName 'System.Net.Http'
     . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers/TestHttpServer.ps1')
     $script:payload = [byte[]](0..255 + 0..255)
     $script:server = Start-TestHttpServer -Routes @{
@@ -103,6 +105,18 @@ Describe 'Invoke-OpenApiRequest responses (end to end)' {
         @($first).Count | Should -Be 1
         $first[0].Message | Should -Match "'oldOp'.*deprecated"
         @($second).Count | Should -Be 0
+    }
+
+    It 'writes the deprecation warning through the calling command passed as -Cmdlet' {
+        function Get-TestOld {
+            [CmdletBinding()]
+            param($Operation)
+            Invoke-OpenApiRequest -Service 'Resp' -Operation $Operation -Cmdlet $PSCmdlet
+        }
+        $warnings = $null
+        $null = Get-TestOld -Operation (New-TestOperation -Path '/one' -Deprecated -Id 'viaCmdlet') -WarningVariable warnings -WarningAction SilentlyContinue
+        @($warnings).Count | Should -Be 1
+        $warnings[0].Message | Should -Match "'viaCmdlet'"
     }
 
     It 'writes the request line and status to Verbose with the api key redacted' {

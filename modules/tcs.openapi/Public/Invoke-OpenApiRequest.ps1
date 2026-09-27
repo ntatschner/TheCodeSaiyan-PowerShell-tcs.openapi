@@ -154,6 +154,7 @@ function Invoke-OpenApiRequest {
     )
 
     $bodyGiven = $PSBoundParameters.ContainsKey('Body')
+    Import-OpenApiHttpAssembly
 
     # Preferences of the calling command do not cross module boundaries; take them from -Cmdlet
     if ($null -ne $Cmdlet) {
@@ -197,31 +198,22 @@ function Invoke-OpenApiRequest {
         return
     }
 
+    $loadProblem = ''
     try {
         $context = Resolve-OpenApiContext -Service $Service
     }
     catch {
         $context = $null
-        Write-Verbose -Message "The saved context of '$Service' could not be loaded: $($_.Exception.Message)"
+        $loadProblem = " The saved context could not be loaded: $($_.Exception.Message)"
     }
     if ($null -eq $context) {
-        $exception = New-Object System.InvalidOperationException -ArgumentList "There is no connection for the '$Service' service. Run Set-OpenApiContext -Service '$Service' -BaseUri <url> first."
+        $exception = New-Object System.InvalidOperationException -ArgumentList "There is no connection for the '$Service' service. Run Set-OpenApiContext -Service '$Service' -BaseUri <url> first.$loadProblem"
         & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $path -Exception $exception -Kind 'NoContext' -Category ([System.Management.Automation.ErrorCategory]::ConnectionError))
         return
     }
 
     if ([bool](Get-OpenApiMember -InputObject $Operation -Name 'Deprecated') -and -not [string]::IsNullOrEmpty($operationId)) {
-        if ($null -ne $Cmdlet) {
-            # Written through the caller so its -WarningAction applies; once per session
-            $warnings = $null
-            Write-OpenApiDeprecationWarning -Service $Service -OperationId $operationId -WarningAction SilentlyContinue -WarningVariable warnings
-            foreach ($warning in @($warnings)) {
-                $Cmdlet.WriteWarning($warning.Message)
-            }
-        }
-        else {
-            Write-OpenApiDeprecationWarning -Service $Service -OperationId $operationId
-        }
+        Write-OpenApiDeprecationWarning -Service $Service -OperationId $operationId -Cmdlet $Cmdlet
     }
 
     # Get-OpenApiMember returns a collection as one object; piping the variable enumerates it
@@ -275,6 +267,12 @@ function Invoke-OpenApiRequest {
         }
         if ([string]::IsNullOrEmpty($bodyContentType)) {
             $bodyContentType = 'application/json'
+        }
+        if ($Body -is [System.IO.Stream] -and -not $Body.CanSeek) {
+            # A retry must be able to send the body again
+            $buffer = New-Object System.IO.MemoryStream
+            $Body.CopyTo($buffer)
+            $Body = $buffer
         }
         # A new HttpContent is built for every attempt (a sent request cannot be sent again)
         $contentFactory = { Build-OpenApiHttpContent -Body $Body -ContentType $bodyContentType }
