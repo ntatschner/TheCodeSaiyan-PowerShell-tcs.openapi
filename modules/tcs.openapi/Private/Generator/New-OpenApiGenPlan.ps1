@@ -9,7 +9,8 @@ function New-OpenApiGenPlan {
         name (Get-OpenApiGenCommandName, then Resolve-OpenApiGenNameCollision across all operations),
         the parameter model, the operation metadata and the rendered wrapper, which must parse and bind
         (Test-OpenApiGenFunction) or the operation is skipped. Operations the document model flags as
-        Unsupported are skipped too. Every skip is an OA070 finding.
+        Unsupported, without an operationId or with the operationId of an earlier operation (ordinal) are
+        skipped too. Every skip is an OA070 finding.
 
         Files (RelativePath uses '/'): <Name>.psd1, <Name>.psm1, README.md, Overrides.ps1 (Kind
         'Overrides': never overwritten), OpenApi/operations.json, OpenApi/source.json,
@@ -54,9 +55,19 @@ function New-OpenApiGenPlan {
 
     $operations = Get-OpenApiGenOrdinalSorted -InputObject @($Document.Operations) -Key { [string]$_.Path + [char]0 + ([string]$_.Method).ToUpperInvariant() }
     $supported = New-Object -TypeName System.Collections.ArrayList
+    $seenIds = New-Object -TypeName 'System.Collections.Generic.HashSet[string]' -ArgumentList ([System.StringComparer]::Ordinal)
     foreach ($operation in $operations) {
         if ($operation.Unsupported -eq $true) {
             & $addSkip $operation 'the document model marked it as unsupported (see the earlier findings for this operation).' 'Warning'
+            continue
+        }
+        # The metadata is keyed by operationId, so it must be present and unique
+        if ([string]::IsNullOrEmpty([string]$operation.OperationId)) {
+            & $addSkip $operation 'it has no operationId.' 'Error'
+            continue
+        }
+        if (-not $seenIds.Add([string]$operation.OperationId)) {
+            & $addSkip $operation 'another operation has the same operationId.' 'Error'
             continue
         }
         [void]$supported.Add($operation)

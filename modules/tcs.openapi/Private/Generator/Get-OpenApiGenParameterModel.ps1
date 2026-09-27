@@ -194,6 +194,15 @@ function Get-OpenApiGenParameterModel {
         elseif ([string]::IsNullOrWhiteSpace($bodyDescription)) {
             $bodyDescription = 'The request body.'
         }
+        if ($kind -eq 'multipart') {
+            $bodyDescription += ' A hashtable of form fields; pass a file as a [System.IO.FileInfo] (Get-Item -Path ./file.txt).'
+        }
+        elseif ($kind -eq 'form') {
+            $bodyDescription += ' A hashtable of form fields.'
+        }
+        elseif ($kind -eq 'binary') {
+            $bodyDescription += ' A [byte[]], a [System.IO.Stream] or a [System.IO.FileInfo].'
+        }
         [void]$used.Add('Body')
         $bodySet = $null
         if ($bodyMode -eq 'Flattened') {

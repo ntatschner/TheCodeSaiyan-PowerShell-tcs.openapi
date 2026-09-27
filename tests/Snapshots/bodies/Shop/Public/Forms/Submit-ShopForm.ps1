@@ -7,7 +7,7 @@ function Submit-ShopForm {
         Calls the 'submitForm' operation (POST /forms).
 
     .PARAMETER Body
-        The request body.
+        The request body. A hashtable of form fields.
 
     .PARAMETER Raw
         Returns the raw response (StatusCode, Headers and Content) instead of the parsed content.

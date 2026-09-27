@@ -125,6 +125,18 @@ Describe 'New-OpenApiGenPlan' {
         $names | Should -Contain 'Get-ShopContextContext'
     }
 
+    It 'skips an operation without an operationId or with a duplicate one' {
+        $document = New-TestDocument -Operations @(
+            (New-TestOperation -OperationId 'getA' -Method GET -Path '/a'),
+            (New-TestOperation -OperationId 'getA' -Method GET -Path '/b'),
+            (New-TestOperation -OperationId '' -Method GET -Path '/c')
+        )
+        $result = New-TestPlan -Document $document -ModuleName 'Dup' -NounPrefix ''
+        $result.Functions.OperationId | Should -Contain 'getA'
+        @($result.Skipped.Path) | Should -Be @('/b', '/c')
+        @($result.Findings | Where-Object -FilterScript { $_.Code -eq 'OA070' -and $_.Severity -eq 'Error' }).Count | Should -Be 2
+    }
+
     It 'plans a module for a document without operations' {
         $empty = New-TestPlan -Document (New-TestDocument) -ModuleName 'Empty' -NounPrefix ''
         ($empty.Files | Where-Object -FilterScript { $_.RelativePath -eq 'OpenApi/operations.json' }).Content | Should -Be "[]`n"

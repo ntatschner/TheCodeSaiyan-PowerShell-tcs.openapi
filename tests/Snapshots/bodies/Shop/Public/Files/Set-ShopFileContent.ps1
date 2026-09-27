@@ -10,7 +10,7 @@ function Set-ShopFileContent {
         The 'fileId' path parameter.
 
     .PARAMETER Body
-        The request body.
+        The request body. A [byte[]], a [System.IO.Stream] or a [System.IO.FileInfo].
 
     .PARAMETER Raw
         Returns the raw response (StatusCode, Headers and Content) instead of the parsed content.

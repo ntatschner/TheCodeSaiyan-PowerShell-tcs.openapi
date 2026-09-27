@@ -7,7 +7,7 @@ function New-ShopUploadFile {
         Calls the 'uploadFile' operation (POST /files).
 
     .PARAMETER Body
-        The request body.
+        The request body. A hashtable of form fields; pass a file as a [System.IO.FileInfo] (Get-Item -Path ./file.txt).
 
     .PARAMETER Raw
         Returns the raw response (StatusCode, Headers and Content) instead of the parsed content.
