@@ -91,7 +91,7 @@ Describe 'Invoke-OpenApiRequest errors (end to end)' {
     }
 
     It 'shows the error in the error stream of the caller' {
-        $output = @(404 | Get-TestPet 2>&1)
+        $output = @(404 | Get-TestPet -ErrorAction Continue 2>&1)
         $output.Count | Should -Be 1
         $output[0] | Should -BeOfType ([System.Management.Automation.ErrorRecord])
         $output[0].FullyQualifiedErrorId | Should -BeLike 'OpenApi.Err.404*'
