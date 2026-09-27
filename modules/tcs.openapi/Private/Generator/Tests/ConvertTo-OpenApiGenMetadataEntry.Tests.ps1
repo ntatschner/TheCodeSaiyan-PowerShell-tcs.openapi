@@ -52,6 +52,26 @@ Describe 'ConvertTo-OpenApiGenMetadataEntry' {
         (Get-TestMetadata -Operation $document.Operations[0] -Document $document).ResponseTypeName | Should -Be 'PetStore.Pet'
     }
 
+    It 'types the items of a nextLink page, looking the page schema up when it is a stub' {
+        $itemStub = New-TestSchema -Type object -RefName 'Pet'
+        $page = New-TestSchema -Type object -RefName 'PetPage' -Properties ([ordered]@{
+                value    = New-TestSchema -Type array -Items $itemStub
+                nextLink = New-TestSchema -Type string
+            })
+        $paging = [ordered]@{ Kind = 'nextLink'; ItemsProperty = 'value'; NextLinkProperty = 'nextLink' }
+        $json = 'application/json'
+        $full = New-TestOperation -OperationId 'listFull' -Method GET -Path '/full' -Paging $paging -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $page))))
+        (Get-TestMetadata -Operation $full -Document $document).ResponseTypeName | Should -Be 'PetStore.Pet'
+
+        $withPage = New-TestDocument -Schemas ([ordered]@{ PetPage = $page })
+        $stubbed = New-TestOperation -OperationId 'listStub' -Method GET -Path '/stub' -Paging $paging -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema (New-TestSchema -Type object -RefName 'PetPage')))))
+        (Get-TestMetadata -Operation $stubbed -Document $withPage).ResponseTypeName | Should -Be 'PetStore.Pet'
+
+        $untyped = New-TestSchema -Type object -Properties ([ordered]@{ value = New-TestSchema -Type array -Items (New-TestSchema -Type object) })
+        $plain = New-TestOperation -OperationId 'listPlain' -Method GET -Path '/plain' -Paging $paging -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $untyped))))
+        (Get-TestMetadata -Operation $plain -Document $document).ResponseTypeName | Should -BeNullOrEmpty
+    }
+
     It 'detects binary responses' {
         $photo = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'getPetPhoto' }
         $metadata = Get-TestMetadata -Operation $photo -Document $document

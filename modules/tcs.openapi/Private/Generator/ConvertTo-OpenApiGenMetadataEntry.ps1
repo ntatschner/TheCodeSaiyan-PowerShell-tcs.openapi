@@ -8,7 +8,9 @@ function ConvertTo-OpenApiGenMetadataEntry {
         Security is the operation's own requirement list, or the document default when the operation
         has none (null stays null when neither is set); SecuritySchemes holds a copy of the schemes
         those requirements name. ResponseTypeName is '<Service>.<RefName>' of the first 2xx JSON
-        response schema (or of its array items). The result is an ordered dictionary so the JSON
+        response schema (or of its array items); for an operation whose Paging names an
+        ItemsProperty it is the type of that property's items, because the engine outputs the items
+        of each page, not the page. The result is an ordered dictionary so the JSON
         written from it keeps the documented property order.
     #>
     [CmdletBinding()]
@@ -70,7 +72,20 @@ function ConvertTo-OpenApiGenMetadataEntry {
             }
             if ($kind -eq 'json' -and $null -eq $responseTypeName -and $null -ne $media.Schema) {
                 $refName = $media.Schema.RefName
-                if ([string]::IsNullOrEmpty([string]$refName) -and $media.Schema.Type -eq 'array' -and $null -ne $media.Schema.Items) {
+                $itemsProperty = [string](Get-OpenApiGenMapValue -Map $Operation.Paging -Key 'ItemsProperty')
+                $itemsSchema = $null
+                if ($itemsProperty -ne '') {
+                    $pageSchema = Resolve-OpenApiGenSchema -Schema $media.Schema -Schemas $Document.Schemas
+                    $itemsSchema = Get-OpenApiGenMapValue -Map $pageSchema.Properties -Key $itemsProperty
+                }
+                if ($null -ne $itemsSchema) {
+                    # The engine outputs the items of a page, so they carry the type name of the items
+                    $refName = $null
+                    if ($null -ne $itemsSchema.Items) {
+                        $refName = $itemsSchema.Items.RefName
+                    }
+                }
+                elseif ([string]::IsNullOrEmpty([string]$refName) -and $media.Schema.Type -eq 'array' -and $null -ne $media.Schema.Items) {
                     $refName = $media.Schema.Items.RefName
                 }
                 if (-not [string]::IsNullOrEmpty([string]$refName)) {
