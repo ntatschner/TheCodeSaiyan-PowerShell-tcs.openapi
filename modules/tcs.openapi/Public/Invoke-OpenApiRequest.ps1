@@ -158,13 +158,11 @@ function Invoke-OpenApiRequest {
 
     # Preferences of the calling command do not cross module boundaries; take them from -Cmdlet
     if ($null -ne $Cmdlet) {
-        foreach ($preference in @('VerbosePreference', 'DebugPreference', 'WarningPreference')) {
+        $callerPreference = Get-OpenApiCallerPreference -Cmdlet $Cmdlet
+        foreach ($preference in @($callerPreference.Keys)) {
             $commonName = $preference.Replace('Preference', '')
             if (-not $PSBoundParameters.ContainsKey($commonName) -and -not ($preference -eq 'WarningPreference' -and $PSBoundParameters.ContainsKey('WarningAction'))) {
-                $value = $Cmdlet.SessionState.PSVariable.GetValue($preference)
-                if ($null -ne $value) {
-                    Set-Variable -Name $preference -Value $value
-                }
+                Set-Variable -Name $preference -Value $callerPreference[$preference]
             }
         }
     }
