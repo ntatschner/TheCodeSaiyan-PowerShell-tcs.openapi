@@ -1,0 +1,19 @@
+function Get-{{Prefix}}Context {
+    <#
+    .SYNOPSIS
+        Returns the connection used by the {{ModuleName}} commands, with secrets hidden.
+
+    .DESCRIPTION
+        Calls Get-OpenApiContext from tcs.openapi for the service '{{Service}}'.
+
+    .EXAMPLE
+        Get-{{Prefix}}Context
+
+    .LINK
+        Get-OpenApiContext
+    #>
+    [CmdletBinding()]
+    param()
+
+    Get-OpenApiContext -Service $script:TcsOpenApiService
+}

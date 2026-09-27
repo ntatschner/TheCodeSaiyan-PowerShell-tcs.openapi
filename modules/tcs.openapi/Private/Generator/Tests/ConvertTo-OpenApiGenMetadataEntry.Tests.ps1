@@ -1,0 +1,91 @@
+BeforeAll {
+    $env:TCS_CONFIG_ROOT = Join-Path -Path $TestDrive -ChildPath 'config'
+    $env:TCS_SKIP_UPDATE_CHECK = '1'
+    $env:TCS_TELEMETRY_OPTOUT = '1'
+    $ModuleRoot = Split-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -Parent
+    Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'tcs.openapi.psd1') -Force
+    $RepoRoot = Split-Path -Path (Split-Path -Path $ModuleRoot -Parent) -Parent
+    . (Join-Path -Path $RepoRoot -ChildPath 'tests/Helpers/New-TestOpenApiModel.ps1')
+}
+
+Describe 'ConvertTo-OpenApiGenMetadataEntry' {
+    BeforeAll {
+        $document = New-TestOpenApiModel -Name petstore
+        function Get-TestMetadata {
+            param($Operation, $Document)
+            InModuleScope tcs.openapi -Parameters @{ Operation = $Operation; Document = $Document } {
+                param($Operation, $Document)
+                ConvertTo-OpenApiGenMetadataEntry -Operation $Operation -Document $Document -Service 'PetStore'
+            }
+        }
+    }
+
+    It 'has the documented properties in order' {
+        $metadata = Get-TestMetadata -Operation $document.Operations[0] -Document $document
+        @($metadata.Keys) | Should -Be @('OperationId', 'Method', 'Path', 'Service', 'Deprecated', 'Parameters', 'RequestContentTypes', 'ResponseContentTypes', 'BinaryResponse', 'Security', 'SecuritySchemes', 'Paging', 'ResponseTypeName')
+    }
+
+    It 'copies the spec parameters with style and explode' {
+        $metadata = Get-TestMetadata -Operation $document.Operations[0] -Document $document
+        $metadata.OperationId | Should -Be 'listPets'
+        $metadata.Service | Should -Be 'PetStore'
+        $metadata.Parameters.Count | Should -Be 2
+        $metadata.Parameters[1].Name | Should -Be 'tags'
+        $metadata.Parameters[1].In | Should -Be 'query'
+        $metadata.Parameters[1].Style | Should -Be 'form'
+        $metadata.Parameters[1].Explode | Should -BeTrue
+        $metadata.Parameters[1].AllowReserved | Should -BeFalse
+        @($metadata.Parameters[1].Keys) | Should -Be @('Name', 'In', 'Style', 'Explode', 'AllowReserved')
+    }
+
+    It 'defaults style and explode by location when missing' {
+        $parameter = New-TestParameter -Name 'id' -In path
+        $parameter.Style = $null
+        $parameter.Explode = $null
+        $operation = New-TestOperation -OperationId 'x' -Method GET -Path '/x/{id}' -Parameters @($parameter)
+        $metadata = Get-TestMetadata -Operation $operation -Document $document
+        $metadata.Parameters[0].Style | Should -Be 'simple'
+        $metadata.Parameters[0].Explode | Should -BeFalse
+    }
+
+    It 'sets the response type name from the array item schema' {
+        (Get-TestMetadata -Operation $document.Operations[0] -Document $document).ResponseTypeName | Should -Be 'PetStore.Pet'
+    }
+
+    It 'detects binary responses' {
+        $photo = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'getPetPhoto' }
+        $metadata = Get-TestMetadata -Operation $photo -Document $document
+        $metadata.BinaryResponse | Should -BeTrue
+        $metadata.ResponseContentTypes | Should -Be @('image/png')
+        $metadata.ResponseTypeName | Should -BeNullOrEmpty
+    }
+
+    It 'uses the document security when the operation has none, with the schemes it names' {
+        $metadata = Get-TestMetadata -Operation $document.Operations[0] -Document $document
+        $metadata.Security.Count | Should -Be 1
+        @($metadata.Security[0].Keys) | Should -Be @('bearer')
+        @($metadata.SecuritySchemes.Keys) | Should -Be @('bearer')
+        $metadata.SecuritySchemes['bearer'].Scheme | Should -Be 'bearer'
+    }
+
+    It 'keeps the operation security and an empty list' {
+        $inventory = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'getInventory' }
+        @((Get-TestMetadata -Operation $inventory -Document $document).SecuritySchemes.Keys) | Should -Be @('api_key')
+        $health = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'getHealth' }
+        $metadata = Get-TestMetadata -Operation $health -Document $document
+        , $metadata.Security | Should -BeOfType [object[]]
+        $metadata.Security.Count | Should -Be 0
+        $metadata.SecuritySchemes.Count | Should -Be 0
+    }
+
+    It 'keeps null security when neither the operation nor the document has one' {
+        $plain = New-TestDocument -Operations @((New-TestOperation -OperationId 'x' -Method GET -Path '/x'))
+        (Get-TestMetadata -Operation $plain.Operations[0] -Document $plain).Security | Should -BeNullOrEmpty
+    }
+
+    It 'copies request content types and paging' {
+        $create = $document.Operations | Where-Object -FilterScript { $_.OperationId -eq 'createPets' }
+        (Get-TestMetadata -Operation $create -Document $document).RequestContentTypes | Should -Be @('application/json')
+        (Get-TestMetadata -Operation $document.Operations[0] -Document $document).Paging.Kind | Should -Be 'nextLink'
+    }
+}

@@ -1,0 +1,243 @@
+[
+  {
+    "OperationId": "createUser",
+    "Method": "POST",
+    "Path": "/users",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "fetchWidget",
+    "Method": "GET",
+    "Path": "/widgets",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getMetadata",
+    "Method": "GET",
+    "Path": "/metadata",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getPetOwner",
+    "Method": "GET",
+    "Path": "/pets/{petId}/owner",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "petId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getStockItem",
+    "Method": "GET",
+    "Path": "/items/{itemId}",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "itemId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      },
+      {
+        "Name": "debug",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "Raw",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "user_id",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "userId",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "$filter",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "page[size]",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "X-Request-Id",
+        "In": "header",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      },
+      {
+        "Name": "Host",
+        "In": "header",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      },
+      {
+        "Name": "X-Strict",
+        "In": "header",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      },
+      {
+        "Name": "session_id",
+        "In": "cookie",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "get_pet_owner",
+    "Method": "GET",
+    "Path": "/pets/owner/{name}",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "name",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "putThing",
+    "Method": "POST",
+    "Path": "/things",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "setThing",
+    "Method": "PUT",
+    "Path": "/things",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "updateStockItem",
+    "Method": "PATCH",
+    "Path": "/items/{itemId}",
+    "Service": "Reserved.Names",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "itemId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": null,
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  }
+]

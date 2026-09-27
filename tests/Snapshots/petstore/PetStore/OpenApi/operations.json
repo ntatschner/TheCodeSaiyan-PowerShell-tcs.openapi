@@ -1,0 +1,327 @@
+[
+  {
+    "OperationId": "createPets",
+    "Method": "POST",
+    "Path": "/pets",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": "PetStore.Pet"
+  },
+  {
+    "OperationId": "deletePet",
+    "Method": "DELETE",
+    "Path": "/pets/{petId}",
+    "Service": "PetStore",
+    "Deprecated": true,
+    "Parameters": [
+      {
+        "Name": "petId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      },
+      {
+        "Name": "api_key",
+        "In": "header",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getHealth",
+    "Method": "GET",
+    "Path": "/health",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "text/plain"
+    ],
+    "BinaryResponse": false,
+    "Security": [],
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getInventory",
+    "Method": "GET",
+    "Path": "/store/inventory",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "api_key": []
+      }
+    ],
+    "SecuritySchemes": {
+      "api_key": {
+        "Name": "api_key",
+        "Type": "apiKey",
+        "In": "header",
+        "ParameterName": "api_key",
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getPetPhoto",
+    "Method": "GET",
+    "Path": "/pets/{petId}/photo",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "petId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "image/png"
+    ],
+    "BinaryResponse": true,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "listPets",
+    "Method": "GET",
+    "Path": "/pets",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "limit",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "tags",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": {
+      "Kind": "nextLink",
+      "ItemsProperty": "value",
+      "NextLinkProperty": "nextLink"
+    },
+    "ResponseTypeName": "PetStore.Pet"
+  },
+  {
+    "OperationId": "petStats",
+    "Method": "GET",
+    "Path": "/pets/stats",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "showPetById",
+    "Method": "GET",
+    "Path": "/pets/{petId}",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "petId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": "PetStore.Pet"
+  },
+  {
+    "OperationId": "updatePet",
+    "Method": "PUT",
+    "Path": "/pets/{petId}",
+    "Service": "PetStore",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "petId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "bearer": []
+      }
+    ],
+    "SecuritySchemes": {
+      "bearer": {
+        "Name": "bearer",
+        "Type": "http",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": "bearer",
+        "BearerFormat": "JWT",
+        "Flows": null
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": "PetStore.Pet"
+  }
+]
