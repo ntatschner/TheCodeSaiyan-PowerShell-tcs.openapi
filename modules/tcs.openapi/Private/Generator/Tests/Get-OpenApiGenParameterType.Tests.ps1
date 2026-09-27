@@ -80,6 +80,39 @@ Describe 'Get-OpenApiGenParameterType' {
         (Get-TestType -Schema (New-TestSchema -Type number -Minimum 0 -Maximum 1.5)).Attributes | Should -Contain '[ValidateRange(0.0, 1.5)]'
     }
 
+    It 'reads exclusive bounds as a flag or as the bound' {
+        $flag = New-TestSchema -Type integer -Format int32 -Minimum 1 -Maximum 10
+        $flag | Add-Member -NotePropertyName ExclusiveMinimum -NotePropertyValue $true
+        $flag | Add-Member -NotePropertyName ExclusiveMaximum -NotePropertyValue $false
+        (Get-TestType -Schema $flag).Attributes | Should -Contain '[ValidateRange(2, 10)]'
+        $bound = New-TestSchema -Type integer -Format int32
+        $bound | Add-Member -NotePropertyName ExclusiveMinimum -NotePropertyValue 0
+        $bound | Add-Member -NotePropertyName ExclusiveMaximum -NotePropertyValue 5
+        (Get-TestType -Schema $bound).Attributes | Should -Contain '[ValidateRange(1, 4)]'
+    }
+
+    It 'uses the schema example when the parameter has none' {
+        $schema = New-TestSchema -Type string
+        $schema | Add-Member -NotePropertyName Example -NotePropertyValue 'from-schema'
+        (Get-TestType -Schema $schema).ExampleText | Should -Be "'from-schema'"
+    }
+
+    It 'looks up a schema stub without a type in the schema map and keeps its nullable flag' {
+        $stub = New-TestSchema -RefName 'Address' -Nullable
+        $schemas = [ordered]@{ Address = (New-TestSchema -Type object -RefName 'Address' -Properties ([ordered]@{ city = New-TestSchema -Type string })) }
+        $type = InModuleScope tcs.openapi -Parameters @{ Schema = $stub; Schemas = $schemas } {
+            param($Schema, $Schemas)
+            Get-OpenApiGenParameterType -Schema $Schema -In 'body' -Schemas $Schemas
+        }
+        $type.TypeName | Should -Be 'hashtable'
+        $type.Attributes | Should -Contain '[AllowNull()]'
+        $arrayType = InModuleScope tcs.openapi -Parameters @{ Schema = (New-TestSchema -Type array -Items (New-TestSchema -RefName 'Address')); Schemas = $schemas } {
+            param($Schema, $Schemas)
+            Get-OpenApiGenParameterType -Schema $Schema -In 'body' -Schemas $Schemas
+        }
+        $arrayType.TypeName | Should -Be 'hashtable[]'
+    }
+
     It 'adds ValidateCount from minItems and maxItems' {
         (Get-TestType -Schema (New-TestSchema -Type array -Items (New-TestSchema -Type string) -MinItems 1 -MaxItems 3)).Attributes | Should -Contain '[ValidateCount(1, 3)]'
     }

@@ -38,6 +38,15 @@ Describe 'ConvertTo-OpenApiGenJson' {
         InModuleScope tcs.openapi { ConvertTo-OpenApiGenJson -InputObject @('x') } | Should -BeExactly "[`n  `"x`"`n]"
     }
 
+    It 'writes compressed JSON with -Compress' {
+        InModuleScope tcs.openapi { ConvertTo-OpenApiGenJson -InputObject ([ordered]@{ a = @(1, 2); b = [ordered]@{ c = 'x' } }) -Compress } | Should -BeExactly '{"a":[1,2],"b":{"c":"x"}}'
+    }
+
+    It 'leaves out null and empty values with -SkipEmpty but keeps false and zero' {
+        $value = [ordered]@{ a = $null; b = ''; c = @(); d = @{}; e = [pscustomobject]@{}; f = $false; g = 0; h = 'x' }
+        InModuleScope tcs.openapi -Parameters @{ Value = $value } { param($Value) ConvertTo-OpenApiGenJson -InputObject $Value -Compress -SkipEmpty } | Should -BeExactly '{"f":false,"g":0,"h":"x"}'
+    }
+
     It 'stops at reference cycles' {
         $json = InModuleScope tcs.openapi {
             $node = [pscustomobject]@{ RefName = 'Node'; Child = $null }

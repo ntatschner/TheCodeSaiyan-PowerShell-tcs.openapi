@@ -130,6 +130,18 @@ Describe 'Get-OpenApiGenParameterModel' {
         (Get-TestParameter $model 'Body').Mandatory | Should -BeTrue
     }
 
+    It 'flattens a body given as a schema stub by looking it up in the schema map' {
+        $named = New-TestSchema -Type object -RefName 'Pet' -Properties ([ordered]@{ name = New-TestSchema -Type string })
+        $stub = New-TestSchema -RefName 'Pet'
+        $operation = New-TestOperation -OperationId 'x' -Method POST -Path '/x' -RequestBody (New-TestRequestBody -Content @((New-TestMediaType -ContentType 'application/json' -Schema $stub)))
+        $model = InModuleScope tcs.openapi -Parameters @{ Operation = $operation; Schemas = [ordered]@{ Pet = $named } } {
+            param($Operation, $Schemas)
+            Get-OpenApiGenParameterModel -Operation $Operation -Schemas $Schemas
+        }
+        $model.BodyMode | Should -Be 'Flattened'
+        $model.Parameters.Name | Should -Be @('Name', 'Body', 'Raw')
+    }
+
     It 'makes body properties optional when the body is optional' {
         $schema = New-TestSchema -Type object -Required @('name') -Properties ([ordered]@{ name = New-TestSchema -Type string })
         $model = Get-TestModel -Operation (New-TestOperation -OperationId 'x' -Method POST -Path '/x' -RequestBody (New-TestRequestBody -Content @((New-TestMediaType -ContentType 'application/json' -Schema $schema))))

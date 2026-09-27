@@ -297,7 +297,10 @@ function New-TestOpenApiModel {
             )
         }
         'bodies' {
-            $address = New-TestSchema -Type object -Properties ([ordered]@{ city = New-TestSchema -Type string })
+            $address = New-TestSchema -Type object -RefName 'Address' -Properties ([ordered]@{ city = New-TestSchema -Type string })
+            # Nested references inside a named schema are stubs: RefName and scalar keywords only
+            $addressStub = New-TestSchema -Type object -RefName 'Address'
+            $untypedAddressStub = New-TestSchema -RefName 'Address'
             $order = New-TestSchema -Type object -RefName 'Order' -Properties ([ordered]@{
                     id           = New-TestSchema -Type string -ReadOnly
                     quantity     = New-TestSchema -Type integer -Format int32 -Enum @(1, 5, 10)
@@ -306,8 +309,8 @@ function New-TestOpenApiModel {
                     shipDate     = New-TestSchema -Type string -Format date-time
                     note         = New-TestSchema -Type string -Nullable -Pattern '^[a-z ]*$'
                     labels       = New-TestSchema -Type array -Items (New-TestSchema -Type string) -MaxItems 5
-                    address      = $address
-                    'line-items' = New-TestSchema -Type array -Items $address
+                    address      = $addressStub
+                    'line-items' = New-TestSchema -Type array -Items $untypedAddressStub
                 })
             $operations = @(
                 (New-TestOperation -OperationId 'submitForm' -Method POST -Path '/forms' -Tags 'forms' -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType 'application/x-www-form-urlencoded' -Schema $address)))),
@@ -329,7 +332,7 @@ function New-TestOpenApiModel {
             )
             return New-TestDocument -Title 'Bodies API' -Version '3.0' -Servers @([pscustomobject]@{ Url = '/api'; Description = $null; Variables = $null }) -SecuritySchemes ([ordered]@{
                     oauth = [pscustomobject]@{ Name = 'oauth'; Type = 'oauth2'; In = $null; ParameterName = $null; Scheme = $null; BearerFormat = $null; Flows = [ordered]@{ clientCredentials = [pscustomobject]@{ TokenUrl = 'https://auth.example.com/token'; Scopes = [ordered]@{ 'orders.read' = 'Read orders' } } } }
-                }) -Security @([ordered]@{ oauth = @('orders.read') }) -Schemas ([ordered]@{ Order = $order }) -Operations $operations
+                }) -Security @([ordered]@{ oauth = @('orders.read') }) -Schemas ([ordered]@{ Address = $address; Order = $order }) -Operations $operations
         }
     }
 }

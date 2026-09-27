@@ -9,16 +9,51 @@ function ConvertTo-OpenApiGenJson {
         non-ASCII characters escaped as \uXXXX (the output is plain ASCII), ordered dictionaries and
         PSCustomObjects in their own order and other dictionaries sorted by key (ordinal). A reference
         cycle is written as { "RefName": ..., "Recursive": true } (or null) instead of recursing.
+        -Compress writes everything on one line without spaces. -SkipEmpty leaves out map entries whose
+        value is null, an empty string, an empty array or an empty map.
     #>
     [CmdletBinding()]
     [OutputType([string])]
     param(
         [Parameter()]
         [AllowNull()]
-        [object]$InputObject
+        [object]$InputObject,
+
+        [Parameter()]
+        [switch]$Compress,
+
+        [Parameter()]
+        [switch]$SkipEmpty
     )
 
     $builder = New-Object -TypeName System.Text.StringBuilder
+    $newLine = "`n"
+    $indentUnit = '  '
+    $colon = ': '
+    if ($Compress) {
+        $newLine = ''
+        $indentUnit = ''
+        $colon = ':'
+    }
+    $isEmpty = {
+        param($Item)
+        if ($null -eq $Item) {
+            return $true
+        }
+        if ($Item -is [string]) {
+            return $Item.Length -eq 0
+        }
+        if ($Item -is [System.Collections.IDictionary]) {
+            return $Item.Count -eq 0
+        }
+        if ($Item -is [System.Management.Automation.PSCustomObject]) {
+            return @($Item.PSObject.Properties).Count -eq 0
+        }
+        if ($Item -is [System.Collections.ICollection]) {
+            return $Item.Count -eq 0
+        }
+        return $false
+    }
     $ancestors = New-Object -TypeName System.Collections.ArrayList
     $escapeEvaluator = [System.Text.RegularExpressions.MatchEvaluator] {
         param($Match)
@@ -37,8 +72,8 @@ function ConvertTo-OpenApiGenJson {
     $writer = {
         param($Value, [int]$Depth)
 
-        $indent = '  ' * ($Depth + 1)
-        $closeIndent = '  ' * $Depth
+        $indent = $newLine + ($indentUnit * ($Depth + 1))
+        $closeIndent = $newLine + ($indentUnit * $Depth)
         if ($null -eq $Value) {
             [void]$builder.Append('null')
             return
@@ -94,20 +129,22 @@ function ConvertTo-OpenApiGenJson {
             $isMap = ($Value -is [System.Collections.IDictionary]) -or ($Value -is [System.Management.Automation.PSCustomObject])
             if ($isMap) {
                 $entries = @(Get-OpenApiGenMapEntry -Map $Value)
+                if ($SkipEmpty) {
+                    $entries = @($entries | Where-Object -FilterScript { -not (& $isEmpty $_.Value) })
+                }
                 if ($entries.Count -eq 0) {
                     [void]$builder.Append('{}')
                     return
                 }
-                [void]$builder.Append("{`n")
+                [void]$builder.Append('{')
                 for ($i = 0; $i -lt $entries.Count; $i++) {
                     [void]$builder.Append($indent)
                     & $writer ([string]$entries[$i].Key) 0
-                    [void]$builder.Append(': ')
+                    [void]$builder.Append($colon)
                     & $writer $entries[$i].Value ($Depth + 1)
                     if ($i -lt $entries.Count - 1) {
                         [void]$builder.Append(',')
                     }
-                    [void]$builder.Append("`n")
                 }
                 [void]$builder.Append($closeIndent + '}')
                 return
@@ -118,14 +155,13 @@ function ConvertTo-OpenApiGenJson {
                     [void]$builder.Append('[]')
                     return
                 }
-                [void]$builder.Append("[`n")
+                [void]$builder.Append('[')
                 for ($i = 0; $i -lt $items.Count; $i++) {
                     [void]$builder.Append($indent)
                     & $writer $items[$i] ($Depth + 1)
                     if ($i -lt $items.Count - 1) {
                         [void]$builder.Append(',')
                     }
-                    [void]$builder.Append("`n")
                 }
                 [void]$builder.Append($closeIndent + ']')
                 return

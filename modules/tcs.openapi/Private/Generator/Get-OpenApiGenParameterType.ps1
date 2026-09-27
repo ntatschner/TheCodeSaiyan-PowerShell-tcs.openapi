@@ -9,8 +9,9 @@ function Get-OpenApiGenParameterType {
         array -> element type[], object -> hashtable, anything else -> object. Nullable schemas get
         [AllowNull()]. enum -> [ValidateSet()] (array items too), pattern -> [ValidatePattern()]
         (case-sensitive; skipped when it is not a valid .NET pattern), minimum/maximum ->
-        [ValidateRange()], minLength/maxLength -> [ValidateLength()], minItems/maxItems ->
+        [ValidateRange()] (exclusiveMinimum/exclusiveMaximum as a flag or as the bound), minLength/maxLength -> [ValidateLength()], minItems/maxItems ->
         [ValidateCount()].
+        A schema stub without a type (RefName, no properties) is looked up in -Schemas first.
         Returns { TypeName, IsSwitch, Attributes (attribute source lines), ExampleText (PowerShell
         source for a sample value) }.
     #>
@@ -30,10 +31,19 @@ function Get-OpenApiGenParameterType {
 
         [Parameter()]
         [AllowNull()]
-        [object]$Example
+        [object]$Example,
+
+        [Parameter()]
+        [AllowNull()]
+        [object]$Schemas
     )
 
     $invariant = [System.Globalization.CultureInfo]::InvariantCulture
+    # A stub without a type needs the named schema to find out what it is
+    $nullable = ($null -ne $Schema -and $Schema.Nullable -eq $true)
+    if ($null -ne $Schema -and [string]::IsNullOrEmpty([string]$Schema.Type)) {
+        $Schema = Resolve-OpenApiGenSchema -Schema $Schema -Schemas $Schemas
+    }
     $scalarType = {
         param($ItemSchema)
         if ($null -eq $ItemSchema) {
@@ -69,6 +79,9 @@ function Get-OpenApiGenParameterType {
     $typeName = $baseType
     if ($baseType -eq 'array') {
         $valueSchema = $Schema.Items
+        if ($null -ne $valueSchema -and [string]::IsNullOrEmpty([string]$valueSchema.Type)) {
+            $valueSchema = Resolve-OpenApiGenSchema -Schema $valueSchema -Schemas $Schemas
+        }
         $elementType = & $scalarType $valueSchema
         if ($elementType -eq 'array') {
             $typeName = 'object[]'
@@ -85,7 +98,7 @@ function Get-OpenApiGenParameterType {
     }
 
     $attributes = New-Object -TypeName System.Collections.ArrayList
-    if ($null -ne $Schema -and $Schema.Nullable -eq $true -and -not $isSwitch) {
+    if (($nullable -or ($null -ne $Schema -and $Schema.Nullable -eq $true)) -and -not $isSwitch) {
         [void]$attributes.Add('[AllowNull()]')
     }
 
@@ -130,12 +143,17 @@ function Get-OpenApiGenParameterType {
                 }
             }
         }
-        if (@('int', 'long', 'double') -contains $elementName -and ($null -ne $valueSchema.Minimum -or $null -ne $valueSchema.Maximum) -and $enumValues.Count -eq 0) {
+        $hasBound = ($null -ne $valueSchema.Minimum -or $null -ne $valueSchema.Maximum -or ($null -ne $valueSchema.ExclusiveMinimum -and -not ($valueSchema.ExclusiveMinimum -is [bool])) -or ($null -ne $valueSchema.ExclusiveMaximum -and -not ($valueSchema.ExclusiveMaximum -is [bool])))
+        if (@('int', 'long', 'double') -contains $elementName -and $hasBound -and $enumValues.Count -eq 0) {
             if ($elementName -eq 'double') {
                 $low = -1.7976931348623157E+308
                 $high = 1.7976931348623157E+308
-                if ($null -ne $valueSchema.Minimum) { $low = [double]$valueSchema.Minimum }
-                if ($null -ne $valueSchema.Maximum) { $high = [double]$valueSchema.Maximum }
+                foreach ($bound in @($valueSchema.Minimum, $valueSchema.ExclusiveMinimum)) {
+                    if ($null -ne $bound -and -not ($bound -is [bool])) { $low = [double]$bound }
+                }
+                foreach ($bound in @($valueSchema.Maximum, $valueSchema.ExclusiveMaximum)) {
+                    if ($null -ne $bound -and -not ($bound -is [bool])) { $high = [double]$bound }
+                }
                 $format = {
                     param([double]$Number)
                     $text = $Number.ToString('R', $invariant)
@@ -158,13 +176,26 @@ function Get-OpenApiGenParameterType {
                 }
                 $low = - $limit
                 $high = $limit
-                if ($null -ne $valueSchema.Minimum) {
-                    $low = [math]::Ceiling([double]$valueSchema.Minimum)
-                    if ($valueSchema.ExclusiveMinimum -eq $true -and $low -eq [double]$valueSchema.Minimum) { $low++ }
+                # exclusiveMinimum/Maximum: a flag (OAS 3.0) or the bound itself (OAS 3.1)
+                $minimum = $valueSchema.Minimum
+                $minimumExclusive = ($valueSchema.ExclusiveMinimum -is [bool]) -and $valueSchema.ExclusiveMinimum
+                if ($null -ne $valueSchema.ExclusiveMinimum -and -not ($valueSchema.ExclusiveMinimum -is [bool])) {
+                    $minimum = $valueSchema.ExclusiveMinimum
+                    $minimumExclusive = $true
                 }
-                if ($null -ne $valueSchema.Maximum) {
-                    $high = [math]::Floor([double]$valueSchema.Maximum)
-                    if ($valueSchema.ExclusiveMaximum -eq $true -and $high -eq [double]$valueSchema.Maximum) { $high-- }
+                $maximum = $valueSchema.Maximum
+                $maximumExclusive = ($valueSchema.ExclusiveMaximum -is [bool]) -and $valueSchema.ExclusiveMaximum
+                if ($null -ne $valueSchema.ExclusiveMaximum -and -not ($valueSchema.ExclusiveMaximum -is [bool])) {
+                    $maximum = $valueSchema.ExclusiveMaximum
+                    $maximumExclusive = $true
+                }
+                if ($null -ne $minimum) {
+                    $low = [math]::Ceiling([double]$minimum)
+                    if ($minimumExclusive -and $low -eq [double]$minimum) { $low++ }
+                }
+                if ($null -ne $maximum) {
+                    $high = [math]::Floor([double]$maximum)
+                    if ($maximumExclusive -and $high -eq [double]$maximum) { $high-- }
                 }
                 $low = [math]::Max($low, - $limit)
                 $high = [math]::Min($high, $limit)
@@ -196,6 +227,9 @@ function Get-OpenApiGenParameterType {
 
     # Example value, as PowerShell source
     $sample = $Example
+    if ($null -eq $sample -and $null -ne $Schema -and $null -ne $Schema.Example -and $typeName -notlike '*[[]]') {
+        $sample = $Schema.Example
+    }
     if ($null -eq $sample -and $null -ne $valueSchema) {
         $enumSample = @($valueSchema.Enum | Where-Object -FilterScript { $null -ne $_ })
         if ($enumSample.Count -gt 0) {

@@ -13,7 +13,8 @@ function New-OpenApiGenPlan {
         skipped too. Every skip is an OA070 finding.
 
         Files (RelativePath uses '/'): <Name>.psd1, <Name>.psm1, README.md, Overrides.ps1 (Kind
-        'Overrides': never overwritten), OpenApi/operations.json, OpenApi/source.json,
+        'Overrides': never overwritten), OpenApi/operations.json, OpenApi/source.json (compressed, without null or empty
+        properties),
         Public/<Tag>/<Verb>-<Noun>.ps1 and Public/_Connection/<Verb>-<Prefix>Context.ps1. The output
         depends only on the inputs: same document and options give the same text.
 
@@ -93,7 +94,7 @@ function New-OpenApiGenPlan {
     for ($i = 0; $i -lt $supported.Count; $i++) {
         $operation = $supported[$i]
         $name = $resolved.Names[$i]
-        $model = Get-OpenApiGenParameterModel -Operation $operation -BaseNoun $name.BaseNoun
+        $model = Get-OpenApiGenParameterModel -Operation $operation -BaseNoun $name.BaseNoun -Schemas $Document.Schemas
         $metadata = ConvertTo-OpenApiGenMetadataEntry -Operation $operation -Document $Document -Service $Option.Service
         $text = ConvertTo-OpenApiGenFunction -CommandName $name -Operation $operation -ParameterModel $model -ResponseTypeName $metadata.ResponseTypeName -Template $Template['Function.ps1']
         $check = Test-OpenApiGenFunction -Text $text -FunctionName $name.Name
@@ -165,7 +166,7 @@ function New-OpenApiGenPlan {
     [void]$files.Add([pscustomobject]@{ RelativePath = 'README.md'; Kind = 'Readme'; Content = $readme; FunctionName = $null; OperationId = $null })
     $sortedMetadata = Get-OpenApiGenOrdinalSorted -InputObject $metadataList.ToArray() -Key { [string]$_.OperationId }
     [void]$files.Add([pscustomobject]@{ RelativePath = 'OpenApi/operations.json'; Kind = 'Metadata'; Content = ((ConvertTo-OpenApiGenJson -InputObject $sortedMetadata) + "`n"); FunctionName = $null; OperationId = $null })
-    [void]$files.Add([pscustomobject]@{ RelativePath = 'OpenApi/source.json'; Kind = 'Source'; Content = ((ConvertTo-OpenApiGenJson -InputObject $Document) + "`n"); FunctionName = $null; OperationId = $null })
+    [void]$files.Add([pscustomobject]@{ RelativePath = 'OpenApi/source.json'; Kind = 'Source'; Content = ((ConvertTo-OpenApiGenJson -InputObject $Document -Compress -SkipEmpty) + "`n"); FunctionName = $null; OperationId = $null })
 
     return [pscustomobject]@{
         PSTypeName   = 'Tcs.OpenApi.GenerationPlan'

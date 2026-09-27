@@ -15,6 +15,8 @@ function Get-OpenApiGenParameterModel {
         parameter gets the suffix too, then a number. Every rename is an OA041 warning.
         Aliases: the spec name when it differs, and 'Id' for a path parameter named <noun>Id.
 
+        -Schemas (Document.Schemas) is used to look up schema stubs (see Resolve-OpenApiGenSchema).
+
         Returns { Parameters, BodyMode ('None'|'Flattened'|'Body'), BodyRequired, ContentTypes,
         Pageable, BinaryResponse, Findings }.
     #>
@@ -26,7 +28,11 @@ function Get-OpenApiGenParameterModel {
 
         [Parameter()]
         [AllowEmptyString()]
-        [string]$BaseNoun = ''
+        [string]$BaseNoun = '',
+
+        [Parameter()]
+        [AllowNull()]
+        [object]$Schemas
     )
 
     $comparer = [System.StringComparer]::OrdinalIgnoreCase
@@ -97,7 +103,7 @@ function Get-OpenApiGenParameterModel {
     foreach ($location in @('path', 'query', 'header', 'cookie')) {
         foreach ($specParameter in @($specParameters | Where-Object -FilterScript { $_.In -eq $location })) {
             $required = ($location -eq 'path') -or ($specParameter.Required -eq $true)
-            $type = Get-OpenApiGenParameterType -Schema $specParameter.Schema -In $location -Required:$required -Example $specParameter.Example
+            $type = Get-OpenApiGenParameterType -Schema $specParameter.Schema -In $location -Required:$required -Example $specParameter.Example -Schemas $Schemas
             [void]$parameters.Add([pscustomobject]@{
                     Name         = (& $newName ([string]$specParameter.Name) $location)
                     SpecName     = [string]$specParameter.Name
@@ -133,7 +139,7 @@ function Get-OpenApiGenParameterModel {
         $bodySchema = $null
         $kind = 'binary'
         if ($null -ne $firstMedia) {
-            $bodySchema = $firstMedia.Schema
+            $bodySchema = Resolve-OpenApiGenSchema -Schema $firstMedia.Schema -Schemas $Schemas
             $kind = Get-OpenApiGenMediaKind -ContentType $firstMedia.ContentType -Schema $bodySchema
         }
         $properties = @()
@@ -148,7 +154,7 @@ function Get-OpenApiGenParameterModel {
             $requiredProperties = @($bodySchema.Required | Where-Object -FilterScript { $null -ne $_ } | ForEach-Object -Process { [string]$_ })
             foreach ($property in $properties) {
                 $propertyRequired = $bodyRequired -and ($requiredProperties -ccontains $property.Key)
-                $type = Get-OpenApiGenParameterType -Schema $property.Value -In 'body' -Required:$propertyRequired
+                $type = Get-OpenApiGenParameterType -Schema $property.Value -In 'body' -Required:$propertyRequired -Schemas $Schemas
                 [void]$parameters.Add([pscustomobject]@{
                         Name         = (& $newName $property.Key 'body')
                         SpecName     = $property.Key
@@ -173,7 +179,7 @@ function Get-OpenApiGenParameterModel {
         $bodyType = 'object'
         $bodyExample = "'example'"
         $objectSchemas = @(@($bodySchema) + @($bodySchema.OneOf) + @($bodySchema.AnyOf) | Where-Object -FilterScript {
-                $null -ne $_ -and ($_.Type -eq 'object' -or @(Get-OpenApiGenMapEntry -Map $_.Properties).Count -gt 0)
+                $null -ne $_ -and ($_.Type -eq 'object' -or @(Get-OpenApiGenMapEntry -Map (Resolve-OpenApiGenSchema -Schema $_ -Schemas $Schemas).Properties).Count -gt 0)
             })
         if ($kind -eq 'form' -or $kind -eq 'multipart' -or $bodyMode -eq 'Flattened' -or $objectSchemas.Count -gt 0) {
             $bodyExample = '@{}'
