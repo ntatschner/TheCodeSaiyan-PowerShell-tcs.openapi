@@ -12,6 +12,7 @@
     - Test: Run validation and Pester tests
     - UpdateVersion: Update the module version
     - PrepareRelease: Prepare for a new release
+    - UpdateSnapshots: Regenerate the generator snapshots in tests/Snapshots (review the diff before committing)
     - Clean: Clean up build artifacts
 
 .PARAMETER Version
@@ -25,6 +26,10 @@
     Runs validation checks on the module
 
 .EXAMPLE
+    .\Build.ps1 -Task UpdateSnapshots
+    Regenerates tests/Snapshots after a deliberate change to the generator or its templates
+
+.EXAMPLE
     .\Build.ps1 -Task UpdateVersion -Version "0.1.8"
     Updates the module version to 0.1.8
 
@@ -36,7 +41,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Validate', 'Test', 'UpdateVersion', 'PrepareRelease', 'Clean', 'Help')]
+    [ValidateSet('Validate', 'Test', 'UpdateSnapshots', 'UpdateVersion', 'PrepareRelease', 'Clean', 'Help')]
     [string]$Task,
 
     [string]$Version,
@@ -47,7 +52,14 @@ param(
 $ModuleName = 'tcs.openapi'
 $ModulePath = Join-Path -Path (Join-Path -Path $PSScriptRoot -ChildPath 'modules') -ChildPath $ModuleName
 $PesterVersion = '5.7.1'
+$TcsCoreVersion = '0.4.0'
 $ManifestPath = Join-Path $ModulePath "$ModuleName.psd1"
+# PSScriptAnalyzer covers the module, the test helpers and the CI scripts (not the Pester files)
+$AnalyzerPaths = @($ModulePath, (Join-Path $PSScriptRoot 'tests/Helpers'), (Join-Path $PSScriptRoot '.github/scripts'))
+
+# Keep build runs offline and away from the real user profile
+$env:TCS_SKIP_UPDATE_CHECK = '1'
+$env:TCS_TELEMETRY_OPTOUT = '1'
 
 function Write-TaskHeader {
     param([string]$Title)
@@ -71,8 +83,17 @@ function Write-BuildError {
     Write-Host "❌ $Message" -ForegroundColor Red
 }
 
+function Install-TcsCore {
+    # tcs.core is a RequiredModule of tcs.openapi: the module does not import without it
+    if (-not (Get-Module -ListAvailable -Name tcs.core | Where-Object Version -EQ $TcsCoreVersion)) {
+        Write-Host "Installing tcs.core $TcsCoreVersion..." -ForegroundColor Gray
+        Install-Module tcs.core -RequiredVersion $TcsCoreVersion -Scope CurrentUser -Force
+    }
+}
+
 function Test-ModuleValidation {
     Write-TaskHeader "Module Validation"
+    Install-TcsCore
 
     Write-Host "Testing module manifest..." -ForegroundColor Gray
     if (-not (Test-Path $ManifestPath)) {
@@ -81,7 +102,14 @@ function Test-ModuleValidation {
     }
 
     try {
-        $manifest = Test-ModuleManifest -Path $ManifestPath -ErrorAction Stop
+        $problems = $null
+        $manifest = Test-ModuleManifest -Path $ManifestPath -ErrorAction SilentlyContinue -ErrorVariable problems
+        # Test-ModuleManifest looks RequiredAssemblies (System.Net.Http) up in the GAC, which exists only on Windows
+        $isWindowsOs = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
+        $problems = @($problems | Where-Object { $isWindowsOs -or $_.FullyQualifiedErrorId -notlike 'Modules_InvalidRequiredAssembliesInModuleManifest*' })
+        if ($problems.Count -gt 0 -or $null -eq $manifest) {
+            throw ($problems | ForEach-Object { $_.Exception.Message }) -join '; '
+        }
         Write-BuildSuccess "Module manifest is valid"
         Write-Host "  Module: $($manifest.Name)" -ForegroundColor Gray
         Write-Host "  Version: $($manifest.Version)" -ForegroundColor Gray
@@ -94,7 +122,6 @@ function Test-ModuleValidation {
 
     Write-Host "Testing module import..." -ForegroundColor Gray
     try {
-        $env:TCS_SKIP_UPDATE_CHECK = '1'
         Import-Module $ManifestPath -Force -ErrorAction Stop
         Write-BuildSuccess "Module imports successfully"
 
@@ -121,7 +148,6 @@ function Test-ScriptAnalyzer {
 
     $settingsPath = Join-Path $PSScriptRoot 'PSScriptAnalyzerSettings.psd1'
     $analyzerParams = @{
-        Path      = $ModulePath
         Recurse   = $true
         Severity  = @('Warning', 'Error')
     }
@@ -130,7 +156,7 @@ function Test-ScriptAnalyzer {
     }
 
     # Pester files are excluded: PSScriptAnalyzer cannot follow Pester's block scoping
-    $results = Invoke-ScriptAnalyzer @analyzerParams | Where-Object { $_.ScriptName -notlike '*.Tests.ps1' }
+    $results = $AnalyzerPaths | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ @analyzerParams } | Where-Object { $_.ScriptName -notlike '*.Tests.ps1' }
 
     if ($results) {
         $errors = ($results | Where-Object Severity -eq 'Error').Count
@@ -157,10 +183,7 @@ function Invoke-PesterTests {
         Install-Module Pester -RequiredVersion $PesterVersion -Force -SkipPublisherCheck -Scope CurrentUser
     }
     Import-Module Pester -RequiredVersion $PesterVersion -Force
-
-    # Keep test runs offline and away from the real user profile
-    $env:TCS_SKIP_UPDATE_CHECK = '1'
-    $env:TCS_TELEMETRY_OPTOUT = '1'
+    Install-TcsCore
 
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.Run.Path = @($ModulePath, (Join-Path $PSScriptRoot 'tests'))
@@ -179,6 +202,20 @@ function Invoke-PesterTests {
     }
 
     Write-BuildSuccess "All $($result.PassedCount) Pester tests passed"
+    return $true
+}
+
+function Update-Snapshot {
+    Write-TaskHeader "Update Snapshots"
+    Install-TcsCore
+
+    $script = Join-Path $PSScriptRoot 'tests/Helpers/Update-Snapshots.ps1'
+    if ($WhatIf) {
+        & $script -WhatIf
+        return $true
+    }
+    & $script
+    Write-BuildSuccess "Snapshots regenerated in tests/Snapshots; review 'git diff tests/Snapshots' before committing"
     return $true
 }
 
@@ -270,6 +307,7 @@ function Show-Help {
     Write-Host "Available tasks:" -ForegroundColor White
     Write-Host "  Validate       - Run module validation checks" -ForegroundColor Gray
     Write-Host "  Test           - Run validation and Pester tests" -ForegroundColor Gray
+    Write-Host "  UpdateSnapshots - Regenerate the generator snapshots in tests/Snapshots" -ForegroundColor Gray
     Write-Host "  UpdateVersion  - Update the module version" -ForegroundColor Gray
     Write-Host "  PrepareRelease - Prepare for a new release" -ForegroundColor Gray
     Write-Host "  Clean          - Clean up build artifacts" -ForegroundColor Gray
@@ -291,6 +329,10 @@ switch ($Task) {
     'Test' {
         # Parentheses are required: without them '-and' is passed to the function as an argument
         $success = (Test-ModuleValidation) -and (Test-ScriptAnalyzer) -and (Invoke-PesterTests)
+        exit $(if ($success) { 0 } else { 1 })
+    }
+    'UpdateSnapshots' {
+        $success = Update-Snapshot
         exit $(if ($success) { 0 } else { 1 })
     }
     'UpdateVersion' {

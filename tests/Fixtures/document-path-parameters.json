@@ -1,0 +1,61 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Path-level parameters and parameter refs", "version": "1.0.0" },
+  "paths": {
+    "/users/{userId}/orders": {
+      "parameters": [
+        { "$ref": "#/components/parameters/userId" },
+        { "name": "X-Request-Id", "in": "header", "description": "Path-level header", "schema": { "type": "string" } },
+        { "name": "page", "in": "query", "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "operationId": "listOrders",
+        "parameters": [
+          { "name": "x-request-id", "in": "header", "required": true, "description": "Operation-level header wins", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/aliasToFilter" },
+          { "name": "session", "in": "cookie", "schema": { "type": "string" } },
+          { "name": "path", "in": "query", "allowReserved": true, "schema": { "type": "string" } },
+          { "name": "coords", "in": "query", "content": { "application/json": { "schema": { "type": "object", "properties": { "lat": { "type": "number" } } } } } },
+          { "name": "ids", "in": "path", "style": "label", "explode": true, "required": false, "schema": { "type": "array", "items": { "type": "integer" } } }
+        ],
+        "responses": { "200": { "description": "ok" } }
+      },
+      "post": {
+        "operationId": "listOrders",
+        "responses": { "201": { "description": "duplicate operationId" } }
+      },
+      "put": {
+        "operationId": "LISTORDERS",
+        "responses": { "200": { "description": "duplicate operationId in another case" } }
+      }
+    },
+    "/users/{userId}/orders/{order-id}": {
+      "parameters": [ { "$ref": "#/components/parameters/userId" } ],
+      "get": {
+        "parameters": [ { "name": "order-id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/a~1b~0c" } } ],
+        "responses": { "200": { "description": "no operationId" } }
+      },
+      "patch": {
+        "parameters": [ { "name": "order-id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/with%20space" } } ],
+        "responses": { "200": { "description": "no operationId either" } }
+      }
+    },
+    "/": {
+      "get": { "responses": { "200": { "description": "root" } } }
+    },
+    "/getRoot": {
+      "get": { "operationId": "getRoot", "responses": { "200": { "description": "explicit id that the generated id for / collides with" } } }
+    }
+  },
+  "components": {
+    "parameters": {
+      "userId": { "name": "userId", "in": "path", "required": true, "description": "The user", "schema": { "type": "string" } },
+      "filter": { "name": "filter", "in": "query", "style": "deepObject", "explode": true, "schema": { "type": "object", "additionalProperties": { "type": "string" } } },
+      "aliasToFilter": { "$ref": "#/components/parameters/filter" }
+    },
+    "schemas": {
+      "a/b~c": { "type": "string", "description": "Name with a slash and a tilde" },
+      "with space": { "type": "string", "format": "uuid" }
+    }
+  }
+}

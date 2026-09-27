@@ -1,0 +1,477 @@
+[
+  {
+    "OperationId": "createBatch",
+    "Method": "POST",
+    "Path": "/batch",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "createNote",
+    "Method": "POST",
+    "Path": "/notes",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "text/plain"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "createOrder",
+    "Method": "POST",
+    "Path": "/orders",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/json",
+      "application/x-www-form-urlencoded"
+    ],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": "Shop.Order"
+  },
+  {
+    "OperationId": "downloadFile",
+    "Method": "GET",
+    "Path": "/files/{fileId}",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "fileId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/octet-stream"
+    ],
+    "BinaryResponse": true,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getPublicStatus",
+    "Method": "GET",
+    "Path": "/public/status",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [],
+    "SecuritySchemes": {},
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "getReport",
+    "Method": "GET",
+    "Path": "/reports/{reportId}",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "reportId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/pdf"
+    ],
+    "BinaryResponse": true,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "listOrders",
+    "Method": "GET",
+    "Path": "/orders",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "since",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "status",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "include_deleted",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      },
+      {
+        "Name": "min_total",
+        "In": "query",
+        "Style": "form",
+        "Explode": true,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [],
+    "ResponseContentTypes": [
+      "application/json"
+    ],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": {
+      "Kind": "linkHeader",
+      "ItemsProperty": null,
+      "NextLinkProperty": null
+    },
+    "ResponseTypeName": "Shop.Order"
+  },
+  {
+    "OperationId": "putFileContent",
+    "Method": "PUT",
+    "Path": "/files/{fileId}/content",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [
+      {
+        "Name": "fileId",
+        "In": "path",
+        "Style": "simple",
+        "Explode": false,
+        "AllowReserved": false
+      }
+    ],
+    "RequestContentTypes": [
+      "application/octet-stream"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "sendEvent",
+    "Method": "POST",
+    "Path": "/events",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/json"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "submitForm",
+    "Method": "POST",
+    "Path": "/forms",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "application/x-www-form-urlencoded"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  },
+  {
+    "OperationId": "uploadFile",
+    "Method": "POST",
+    "Path": "/files",
+    "Service": "Shop",
+    "Deprecated": false,
+    "Parameters": [],
+    "RequestContentTypes": [
+      "multipart/form-data"
+    ],
+    "ResponseContentTypes": [],
+    "BinaryResponse": false,
+    "Security": [
+      {
+        "oauth": [
+          "orders.read"
+        ]
+      }
+    ],
+    "SecuritySchemes": {
+      "oauth": {
+        "Name": "oauth",
+        "Type": "oauth2",
+        "In": null,
+        "ParameterName": null,
+        "Scheme": null,
+        "BearerFormat": null,
+        "Flows": {
+          "clientCredentials": {
+            "TokenUrl": "https://auth.example.com/token",
+            "Scopes": {
+              "orders.read": "Read orders"
+            }
+          }
+        }
+      }
+    },
+    "Paging": null,
+    "ResponseTypeName": null
+  }
+]

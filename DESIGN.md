@@ -20,10 +20,14 @@ modules/tcs.openapi/
   Private/Runtime/   context store, auth, serialisation, bodies, paging, errors
   Templates/         generated-module templates (*.template)
   en-GB/ en-US/      about_tcs.openapi.help.txt (identical)
-tests/               Module.Tests.ps1, Fixtures/*.json|yaml, Helpers/TestHttpServer.ps1, end-to-end tests
+tests/               Module.Tests.ps1 (repository guards), Runtime.*.Tests.ps1, Generator.*.Tests.ps1,
+                     EndToEnd.*.Tests.ps1, Snapshots/, Fixtures/*.json|yaml,
+                     Helpers/ (TestHttpServer.ps1, EndToEnd.ps1, New-TestOpenApiModel.ps1, Update-Snapshots.ps1)
 ```
 
-Each `Public/*.ps1` and `Private/**/*.ps1` has a sibling `Tests/<name>.Tests.ps1`.
+Each `Public/*.ps1` and `Private/**/*.ps1` defines one function named like the file and has a sibling
+`Tests/<name>.Tests.ps1`; every function (public and private) uses an approved verb. `tests/Module.Tests.ps1`
+enforces this, the exports and the help.
 
 ## Public commands
 
@@ -31,7 +35,7 @@ Each `Public/*.ps1` and `Private/**/*.ps1` has a sibling `Tests/<name>.Tests.ps1
 |---|---|---|
 | `Import-OpenApiDocument -Path <file> \| -Uri <url> \| -InputObject <string>` | Generator | Returns the normalised **document model** (below). JSON always; YAML when `ConvertFrom-Yaml` (powershell-yaml) is available, otherwise a clear error. |
 | `Test-OpenApiDocument -Path/-Uri/-InputObject \| -Document <model>` | Generator | Returns **findings** `{ Severity (Error/Warning/Information), Code, Pointer (JSON pointer), Message, Operation }` for invalid structure and for features the generator/runtime do not support. Never throws for document problems. |
-| `New-OpenApiModule -Path/-Uri/-Document -ModuleName <name> -OutputPath <dir> [-NounPrefix] [-ModuleVersion] [-Author] [-Force] [-WhatIf]` | Generator | Writes a complete module (below). Returns a result object `{ ModuleName, Path, ManifestPath, Functions (name, operationId, file, action), Findings, Skipped }`. Supports ShouldProcess; `-WhatIf` writes nothing. Existing generated files are replaced only with `-Force`; `Overrides.ps1` is never overwritten. |
+| `New-OpenApiModule -Path/-Uri/-Document -ModuleName <name> -OutputPath <dir> [-NounPrefix] [-ModuleVersion] [-Author] [-Force] [-WhatIf]` | Generator | Writes a complete module (below). Returns a result object `{ ModuleName, Path, ManifestPath, Functions (name, operationId, file, action), Findings (document + generator), Skipped, Files (every file with its action) }`. Supports ShouldProcess; `-WhatIf` writes nothing. Existing generated files are replaced only with `-Force`; `Overrides.ps1` is never overwritten. `-NounPrefix` has no default (documented as "always set it"); `-ModuleVersion` defaults to 0.1.0 and `-Author` to 'tcs.openapi' so output never depends on the machine. |
 | `Set-OpenApiContext -Service <name> -BaseUri [-ApiKey <SecureString>] [-Credential <PSCredential>] [-BearerToken <SecureString>] [-ClientId -ClientSecret <SecureString> -TokenUri [-Scope]] [-Header <hashtable>] [-TimeoutSec] [-Proxy] [-ProxyCredential] [-SkipCertificateCheck] [-MaxRetries] [-Persist] [-PassThru]` | Runtime | Stores the connection for a service in module scope. `-Persist` saves secrets with `Set-ModuleSecret -ModuleName tcs.openapi -Name <service>.<kind>` and settings as JSON; a later session loads them lazily. |
 | `Get-OpenApiContext [-Service]` | Runtime | Returns contexts with every secret shown as `********`. |
 | `Remove-OpenApiContext -Service [-Persisted]` | Runtime | Clears the context (and saved secrets with `-Persisted`). |
@@ -45,7 +49,7 @@ Always OpenAPI 3-shaped, whatever the input version. `PSTypeName = 'Tcs.OpenApi.
 
 ```
 {
-  SourceVersion : '2.0' | '3.0.x' | '3.1.x'
+  SourceVersion : the version string of the document as written ('2.0', '3.0.3', '3.1.0', ...)
   Title, Version, Description
   Servers       : [ { Url, Description, Variables: { name: { Default, Enum } } } ]   # Swagger 2: from schemes/host/basePath
   SecuritySchemes: { name: SecurityScheme }
@@ -55,7 +59,9 @@ Always OpenAPI 3-shaped, whatever the input version. `PSTypeName = 'Tcs.OpenApi.
   Findings      : [ finding ]                                                        # problems met while normalising
 }
 
-SecurityScheme { Name, Type ('apiKey'|'http'|'oauth2'|'openIdConnect'), In ('header'|'query'|'cookie'), ParameterName, Scheme ('basic'|'bearer'|...), BearerFormat, Flows: { clientCredentials: { TokenUrl, Scopes } , ... } }
+SecurityScheme { Name, Type ('apiKey'|'http'|'oauth2'|'openIdConnect'|...), In ('header'|'query'|'cookie'), ParameterName, Scheme ('basic'|'bearer'|...), BearerFormat,
+                 Flows: { clientCredentials: { TokenUrl, AuthorizationUrl, RefreshUrl, Scopes }, ... }, OpenIdConnectUrl, Description }
+  # Swagger 2.0 oauth2 'application' flow -> clientCredentials
 
 Operation {
   PSTypeName  : 'Tcs.OpenApi.Operation'
@@ -70,6 +76,7 @@ Operation {
   Security    : null (use document default) | [] (no auth) | [ { schemeName: [scopes] } ]
   Paging      : null | { Kind ('nextLink'|'linkHeader'), ItemsProperty, NextLinkProperty }   # from x-ms-pageable, or detected: response object with one array property + a 'nextLink'/'next'/'@odata.nextLink' string
   Extensions  : { 'x-...': value }     # includes x-ps-name, x-ps-noun, x-ps-verb overrides
+  Unsupported : bool                   # true when the operation uses an external $ref (OA020); the generator skips it (OA070)
 }
 
 Parameter { Name (spec), In ('path'|'query'|'header'|'cookie'), Required, Description, Deprecated, Schema, Style, Explode, AllowReserved, Example }
@@ -84,49 +91,76 @@ Schema (normalised, OAS 3.0 vocabulary):
     AllOf/OneOf/AnyOf [Schema], Discriminator, ReadOnly, WriteOnly, Description, RefName (schema name when it came from a $ref), Recursive (bool) }
   # 3.1 type arrays: ['string','null'] -> Type 'string' + Nullable true; multiple non-null types -> Type null + finding
   # allOf is merged into Properties/Required (keeping AllOf for reference); circular $ref -> Recursive = true, not expanded again
+  # Inside a named schema, a $ref to another named schema is a *stub*: RefName plus the scalar keywords (Type, Format,
+  # Enum, Nullable, bounds ...) and an Items stub, but no Properties/Required/AllOf/OneOf/AnyOf/Discriminator. The full
+  # schema is Document.Schemas[RefName] (the generator looks it up with Resolve-OpenApiGenSchema). Stubs keep the
+  # model linear in size. Operation-level schemas (parameters, bodies, responses) are resolved one level.
 ```
 
 `$ref` handling: local refs (`#/components/...`, `#/definitions/...`) for schemas, parameters, requestBodies, responses, headers, securitySchemes are resolved; external/URL refs produce an Error finding and the affected operation is flagged `Unsupported`. Resolution uses a visited set, so circular schemas never recurse forever.
 
 ## Operation metadata (what the generator embeds and the runtime consumes)
 
-The generated module writes `OpenApi/operations.json` and loads it once into `$script:TcsOpenApiOperations` (a hashtable keyed by operationId). Each entry is the minimal runtime view of an Operation, `PSTypeName = 'Tcs.OpenApi.OperationMetadata'`:
+The generated module writes `OpenApi/operations.json` (sorted by operationId, deterministic JSON) and loads it once with
+`ConvertFrom-Json` into `$script:TcsOpenApiOperations` (a case-sensitive hashtable keyed by operationId); each entry is a
+`PSCustomObject` with `Tcs.OpenApi.OperationMetadata` inserted as its first type name. The engine reads every member
+through `Get-OpenApiMember`, so it accepts these objects as well as hand-built hashtables (for direct
+`Invoke-OpenApiRequest` calls). Each entry is the minimal runtime view of an Operation:
 
 ```
 { OperationId, Method, Path, Service, Deprecated,
   Parameters : [ { Name, In, Style, Explode, AllowReserved } ],   # spec names; wrappers pass values keyed by spec name
   RequestContentTypes : [string], ResponseContentTypes : [string], BinaryResponse (bool),
   Security : null | [] | [ { scheme: [scopes] } ], SecuritySchemes : { name: SecurityScheme },  # copy of the relevant schemes
-  Paging : null | { ... }, ResponseTypeName : 'Service.SchemaName' | null }
+  Paging : null | { Kind, ItemsProperty, NextLinkProperty }, ResponseTypeName : 'Service.SchemaName' | null }
 ```
+
+- `Service` is the module name (the connection context of the generated module is `Set-OpenApiContext -Service <ModuleName>`).
+- `Security` is resolved at generation time: the operation's own list, else the document default (`Security` of the
+  model); `null` only when neither exists. `SecuritySchemes` is a copy of the schemes those requirements name. At call
+  time `null` means: a `DefaultSecurity` member when present, else each scheme of `SecuritySchemes` on its own, else
+  (no schemes at all) the context's bearer token or credential ("Generic").
+- `ResponseTypeName` is `<Service>.<RefName>` of the first 2xx JSON response schema, of its array items, or - for an
+  operation whose `Paging.ItemsProperty` names an array of a named schema - of those items, because the engine
+  outputs the items of a page.
+- `BinaryResponse` is true when a 2xx response has a binary media type/schema.
 
 ## Runtime behaviour (Invoke-OpenApiRequest)
 
 - **URL**: context `BaseUri` + path; path values escaped per segment (`[uri]::EscapeDataString`), `allowReserved` honoured for query.
 - **Query/header/cookie serialisation**: only parameters present in the passed hashtables are sent (wrappers pass `$PSBoundParameters`-derived values only). Arrays and objects follow style/explode (`form`, `spaceDelimited`, `pipeDelimited`, `deepObject`); booleans as `true`/`false`; `[datetime]` as ISO 8601 round-trip (`o`); cookies as one `Cookie` header.
 - **Bodies**: by content type - JSON (`ConvertTo-Json -Depth 64 -Compress`, `charset=utf-8`), `application/x-www-form-urlencoded` (hashtable -> encoded pairs), `multipart/form-data` (hashtable; `[System.IO.FileInfo]`/path-with-`-AsFile` values become file parts; built with `System.Net.Http.MultipartFormDataContent` on both editions), `application/octet-stream`/other binary (`[byte[]]`, `[IO.Stream]` or `[IO.FileInfo]`), `text/*` (string). Explicit `$null` values are sent as JSON null.
-- **Auth**: the operation's `Security` (or the document default) picks the first requirement whose schemes all have credentials in the context. apiKey header/query/cookie; http basic (`Credential`); http bearer (`BearerToken`); oauth2 clientCredentials (fetch token from `TokenUri`, cache until 60 s before expiry, refresh on 401 once). `Security = []` sends no credentials. Secrets are held as `SecureString` and decoded only when building the request.
+- **Auth**: the operation's `Security` (or the document default) picks the first requirement whose schemes all have credentials in the context. apiKey header/query/cookie; http basic (`Credential`); http bearer (`BearerToken`); oauth2 clientCredentials (fetch token from the context `TokenUri`, else the flow's `TokenUrl`; scopes from the context, else the requirement; cache until 60 s before expiry, refresh on 401 once). A context `BearerToken` satisfies any oauth2 or openIdConnect scheme and wins over client credentials. `Security = []` sends no credentials. Secrets are held as `SecureString` and decoded only when building the request.
 - **Transport**: `HttpClient` shared per service (created lazily, disposed on module removal) so behaviour is identical on 5.1 and 7; timeout, proxy, SkipCertificateCheck (PS7 via handler callback; 5.1 via `ServerCertificateCustomValidationCallback` on `HttpClientHandler` where available, otherwise a clear error).
 - **Retry**: `Invoke-WithRetry` from tcs.core with `-RetryOnStatusCode 408,429,500,502,503,504` for idempotent methods and 429/503 only for POST/PATCH; honours `Retry-After`; `MaxRetries` from context (default 3).
-- **Responses**: JSON -> `ConvertFrom-Json` objects (no schema validation, no value rewriting) with `PSTypeName` = `ResponseTypeName` added to each object (array items individually); `-Raw` returns `{ StatusCode, Headers, Content (string|byte[]) }`; binary or `-OutFile` streams to the file and returns the `FileInfo`; 204/empty -> nothing.
-- **Paging**: with `-All`, follow `nextLink` (same host only) or the `Link: rel="next"` header, emitting items as they arrive; without `-All`, one page.
-- **Errors**: non-2xx -> `ErrorRecord` with `FullyQualifiedErrorId = 'OpenApi.<Service>.<StatusCode>'` (network failures `OpenApi.<Service>.Connection`), category mapped from status, `TargetObject = { Method, Uri, StatusCode, Headers, Body (parsed problem+json when possible), OperationId }`, message from problem+json `title`/`detail` or the status text. Written with `$Cmdlet.WriteError()` when `-Cmdlet` is passed (so `-ErrorAction` and pipelines behave), otherwise `Write-Error`.
+- **Responses**: JSON -> objects via `ConvertFrom-OpenApiResponseJson` (no schema validation, no value rewriting: date strings stay strings) with `PSTypeName` = `ResponseTypeName` added to each object (array items individually); text and XML -> string; `-Raw` returns `{ StatusCode, Headers, Content (string|byte[]) }` (PSTypeName `Tcs.OpenApi.RawResponse`); `-OutFile` streams the body to the file and returns the `FileInfo`; a binary response without `-OutFile` returns the body as one `byte[]`; 204/empty -> nothing.
+- **Paging**: a pageable operation always outputs the items of each page (the `ItemsProperty` array), never the page object. With `-All`, follow `nextLink` (relative or absolute, same scheme/host/port only, never a URL twice) or the `Link: rel="next"` header with GET and no body, emitting items as they arrive (stopping the pipeline stops fetching); without `-All`, one page and a Verbose note that more exist.
+- **Errors**: non-2xx -> `ErrorRecord` with `FullyQualifiedErrorId = 'OpenApi.<Service>.<StatusCode>'` (other ids: `OpenApi.<Service>.Connection` for network failures, `.Authentication` for TLS/authentication exceptions, `.NoContext` when the service has no context, `.InvalidArgument` for values that cannot be serialised, `.OutFile` when the file cannot be written, and `OpenApi.MissingService`), category mapped from status, `TargetObject = { Method, Uri, StatusCode, Headers, Body (parsed problem+json when possible), OperationId }`, message from problem+json `title`/`detail` or the status text. Written with `$Cmdlet.WriteError()` when `-Cmdlet` is passed (so `-ErrorAction` and pipelines behave), otherwise `Write-Error`.
+- **Preferences**: `-Verbose`, `-Debug` and `-WarningAction` given to the calling (generated) command are read from `$Cmdlet.MyInvocation.BoundParameters` (`$Cmdlet.SessionState` only sees the calling module's script scope); otherwise the preference visible to the calling module applies.
 - **Verbose/Debug**: request line and status always in Verbose; headers and bodies only in Debug, with `Authorization`, api-key headers/query values, cookies and JSON properties named like `password|secret|token|apiKey|client_secret` replaced by `********`.
-- **Deprecated** operations write one warning per session.
+- **Deprecated** operations write one warning per service and operation per session (through `-Cmdlet`, so `-WarningAction` works).
+- **Persisted contexts** (`-Persist`): settings as JSON in `<TCS config root>/tcs.openapi/Contexts/<service>.json`, secrets with `Set-ModuleSecret -ModuleName tcs.openapi -Name <service>.<kind>`; loaded on first use when the session has no context for the service.
 
 ## Generated module
 
 ```
 <OutputPath>/<ModuleName>/
   <ModuleName>.psd1        RequiredModules tcs.openapi (min version = generator version); FunctionsToExport listed explicitly
-  <ModuleName>.psm1        loads OpenApi/operations.json, dot-sources Public/**/*.ps1 then Overrides.ps1; sets Service name
+  <ModuleName>.psm1        sets $script:TcsOpenApiService (= ModuleName), loads OpenApi/operations.json, dot-sources Public/**/*.ps1
+                           (sorted) then Overrides.ps1; cmdlets are module-qualified because a generated command may share a name
   OpenApi/operations.json  operation metadata (above)
-  OpenApi/source.json      the normalised document (for regeneration diffs)
-  Public/<Tag>/<Verb>-<Noun>.ps1   one wrapper per operation; untagged -> Public/Default
+  OpenApi/source.json      the normalised document (compressed, without null/empty values; for regeneration diffs)
+  Public/<Tag>/<Verb>-<Noun>.ps1   one wrapper per operation; folder = PascalCase first tag, untagged -> Public/Default
+  Public/_Connection/Set-|Get-|Remove-<Prefix>Context.ps1   thin wrappers of Set-/Get-/Remove-OpenApiContext with -Service fixed;
+                           <Prefix> = NounPrefix, else the PascalCase module name; -BaseUri of Set- defaults to the first absolute
+                           http(s) server URL (server variables replaced by their defaults), else it is mandatory
   Overrides.ps1            created once, never overwritten; functions defined here replace generated ones of the same name
-  Connect-<Prefix>.ps1 ... (inside Public/_Connection) thin Set-/Get-/Remove-<Prefix>Context wrappers calling the runtime with -Service fixed
   README.md                generated command list
 ```
+
+Output is deterministic (same document and options -> byte-identical files: ordinal sorting, LF line endings,
+UTF-8 with a BOM only when a file is not ASCII). Operations without an operationId, with a duplicate one, flagged
+`Unsupported`, or whose rendered function fails the parse/bind check are skipped with OA070.
 
 ### Naming
 1. `x-ps-name` (full `Verb-Noun`) wins; else `x-ps-verb`/`x-ps-noun`.
@@ -134,10 +168,16 @@ The generated module writes `OpenApi/operations.json` and loads it once into `$s
 3. No operationId: method default verb (GET Get, POST New, PUT Set, PATCH Update, DELETE Remove, HEAD/OPTIONS Test/Get) + noun from the last non-parameter path segments.
 4. Noun = `<NounPrefix>` + PascalCase words, singularised last word (simple English rules, list of irregulars), only `[A-Za-z0-9]`.
 5. Collisions: add the distinguishing path segment or method as a word (`Get-PetOwner` vs `Get-PetOwnerByName`), never a hash; last resort a number suffix; every rename is a Warning finding. Order is deterministic (sorted by path, then method), so adding operations never renames existing ones unless they collide.
-6. Verbs are always approved (`Get-Verb`).
+6. Verbs are always approved (`Get-Verb`, the list common to 5.1 and 7).
+7. A name equal to a command of the core PowerShell modules (Microsoft.PowerShell.Core/Management/Utility/Security, a
+   fixed list taken from PowerShell 7.4 plus the Windows-only and 5.1-only commands, so the result does not depend on
+   the machine) or to a tcs.openapi command is never generated. Core-command clashes are renamed with the connection
+   prefix first (`Get-Item` -> `Get-<ModuleName>Item` when there is no NounPrefix), then the collision rules, as an
+   OA042 Warning.
 
 ### Parameters
 - PowerShell name = PascalCase of the spec name (`X-Request-Id` -> `XRequestId`, `user_id` -> `UserId`); the spec name is kept in metadata. Clashes with common parameters (`Verbose`, `Debug`, `ErrorAction`, `WarningAction`, `InformationAction`, `ErrorVariable`, `WarningVariable`, `InformationVariable`, `OutVariable`, `OutBuffer`, `PipelineVariable`, `WhatIf`, `Confirm`, `ProgressAction`) or the wrapper's own switches (`All`, `Raw`, `OutFile`, `Body`, `ContentType`) get a suffix from `In` (`DebugQuery`); two spec parameters mapping to one name get suffixes too; each is a Warning finding.
+- Values reach the engine keyed by spec name; switches are passed as `[bool]` (`.IsPresent`), so `-Flag:$false` sends `false`.
 - Types: string -> `[string]` (`format: date-time` -> `[datetime]`, `binary` -> `[object]` accepting byte[]/FileInfo/path), integer -> `[int]`/`[long]` (int64 or unbounded), number -> `[double]`, boolean -> `[switch]` for optional query/header booleans and `[bool]` for required ones, array -> element type `[]`, object -> `[hashtable]`; nullable adds `[AllowNull()]`.
 - `Mandatory` only for required path/query/header/cookie parameters and top-level required body properties when the body itself is required.
 - Enums -> `[ValidateSet(...)]` (array items too); `ValidatePattern`/`ValidateRange`/`ValidateLength` from pattern/minimum/maximum/minLength/maxLength.
@@ -150,11 +190,12 @@ The generated module writes `OpenApi/operations.json` and loads it once into `$s
 Comment-based help (summary -> SYNOPSIS, description -> DESCRIPTION, parameter descriptions, one runnable EXAMPLE built from required parameters, `.LINK` to externalDocs, deprecation note), `[CmdletBinding(...)]`, `[OutputType('<Service>.<Schema>')]` when known, `param()`, `process {}` that: builds the four parameter hashtables and the body from `$PSBoundParameters` using a small generated name map, calls `ShouldProcess` when needed, then `Invoke-OpenApiRequest -Service $script:TcsOpenApiService -Operation $script:TcsOpenApiOperations['<id>'] ... -Cmdlet $PSCmdlet`. Generated code must parse, and every function must bind (`Get-Command -Syntax`) - the generator checks both before writing.
 
 ## Findings codes (non-exhaustive)
-`OA001` invalid/unsupported document version, `OA002` missing paths, `OA010` missing operationId (generated), `OA011` duplicate operationId, `OA020` external $ref, `OA021` unresolved $ref, `OA022` circular schema (information), `OA030` unsupported security scheme type (openIdConnect, oauth2 flows other than clientCredentials), `OA031` multiple non-null types (3.1), `OA040` renamed command (collision), `OA041` renamed parameter (reserved/duplicate), `OA050` oneOf/anyOf body (passed through as -Body only), `OA051` unsupported media type (sent as raw string/bytes), `OA060` deprecated operation, `OA070` operation skipped.
+`OA001` invalid/unsupported document version, `OA002` missing paths, `OA010` missing operationId (generated), `OA011` duplicate operationId, `OA020` external $ref, `OA021` unresolved $ref, `OA022` circular schema (information), `OA030` unsupported security scheme type (openIdConnect, oauth2 flows other than clientCredentials), `OA031` multiple non-null types (3.1), `OA040` renamed command (collision), `OA041` renamed parameter (reserved/duplicate), `OA042` renamed command (would shadow a core PowerShell command), `OA050` oneOf/anyOf body (passed through as -Body only), `OA051` unsupported media type (sent as raw string/bytes), `OA060` deprecated operation, `OA070` operation skipped.
 
 ## Testing
 - Unit tests per function (pure functions take/return objects, no disk).
 - Fixtures: petstore-like 3.0, 3.1, Swagger 2.0, circular, external-ref, reserved names, auth variants, bodies (json/form/multipart/binary/array), paging (nextLink + Link header).
 - Snapshot tests: generated module for 3 fixtures compared with checked-in expected output (`tests/Snapshots/`), regenerated with `Build.ps1 -Task UpdateSnapshots`.
-- End-to-end: `tests/Helpers/TestHttpServer.ps1` starts an `HttpListener` on 127.0.0.1 with a free port in a background runspace, records requests and serves scripted responses; generated modules are imported and called against it (auth, serialisation, bodies, paging, retry on 429 with Retry-After, errors, downloads).
+- End-to-end (`tests/EndToEnd.*.Tests.ps1`): `tests/Helpers/TestHttpServer.ps1` starts an `HttpListener` on 127.0.0.1 with a free port in a background runspace, records requests and serves scripted responses; modules generated from the fixtures (petstore 3.0, Swagger 2.0, 3.1 and `e2e-api.json`) with the real generator are imported with the real engine and called against it (every auth kind, serialisation, bodies, paging, retry on 429 with Retry-After, problem+json errors, downloads, -WhatIf, -ErrorAction, pipelines, persisted contexts, Overrides.ps1).
+- Repository guards (`tests/Module.Tests.ps1`): manifest, silent import, exports = FunctionsToExport = Public files, one function per file, approved verbs, a test per function, full help on public commands, identical about topics, BOM on non-ASCII files.
 - PSScriptAnalyzer clean with repo settings; bind check on every generated function.

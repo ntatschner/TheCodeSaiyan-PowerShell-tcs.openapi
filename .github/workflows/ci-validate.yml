@@ -26,11 +26,15 @@ permissions:
 env:
   PESTER_VERSION: '5.7.1'
   PSSA_VERSION: '1.23.0'
+  # tcs.openapi's RequiredModule; every job that imports the module installs this exact version
+  TCS_CORE_VERSION: '0.4.0'
   # Keep test runs offline and side-effect free
   TCS_SKIP_UPDATE_CHECK: '1'
   TCS_TELEMETRY_OPTOUT: '1'
 
 jobs:
+  # The shared workflow installs the manifest's RequiredModules (tcs.core) itself, in its
+  # 'Resolve RequiredModules' step, before the import check and the smoke tests.
   validate:
     name: Validate Module
     uses: ntatschner/tcs-shared-workflows/.github/workflows/ci-validate.yml@main
@@ -53,9 +57,9 @@ jobs:
         shell: pwsh
         run: |
           $settingsPath = Join-Path $env:GITHUB_WORKSPACE 'PSScriptAnalyzerSettings.psd1'
-          $modulePath = Join-Path $env:GITHUB_WORKSPACE 'modules/tcs.openapi'
+          $paths = @('modules/tcs.openapi', 'tests/Helpers', '.github/scripts') | ForEach-Object { Join-Path $env:GITHUB_WORKSPACE $_ }
           # Pester files are excluded: PSScriptAnalyzer cannot follow Pester's block scoping
-          $results = Invoke-ScriptAnalyzer -Path $modulePath -Recurse -Severity @('Error', 'Warning') -Settings $settingsPath |
+          $results = $paths | ForEach-Object { Invoke-ScriptAnalyzer -Path $_ -Recurse -Severity @('Error', 'Warning') -Settings $settingsPath } |
               Where-Object { $_.ScriptName -notlike '*.Tests.ps1' }
           if ($results) {
               $results | Format-Table ScriptName, Line, RuleName, Severity, Message -Wrap
@@ -89,11 +93,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Pester and PSScriptAnalyzer
+      - name: Install Pester, PSScriptAnalyzer and tcs.core
         run: |
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module Pester -RequiredVersion $env:PESTER_VERSION -Force -SkipPublisherCheck -Scope CurrentUser
           Install-Module PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Force -Scope CurrentUser
+          # RequiredModule of tcs.openapi: the tests import the module, which fails without it
+          Install-Module tcs.core -RequiredVersion $env:TCS_CORE_VERSION -Scope CurrentUser -Force
+          Import-Module tcs.core -RequiredVersion $env:TCS_CORE_VERSION -ErrorAction Stop
+
+      - name: Smoke tests
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE '.github/scripts/module-smoke-tests.ps1')
 
       - name: Run Pester
         run: |

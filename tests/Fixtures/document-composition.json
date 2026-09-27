@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "allOf, oneOf and bodies", "version": "1.0.0" },
+  "paths": {
+    "/dogs": {
+      "post": {
+        "operationId": "createDog",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Dog" } } } },
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/animals": {
+      "post": {
+        "operationId": "createAnimal",
+        "requestBody": {
+          "content": {
+            "application/vnd.api+json": { "schema": { "$ref": "#/components/schemas/Animal" } },
+            "text/plain": { "schema": { "type": "string" } },
+            "application/json": { "schema": { "$ref": "#/components/schemas/Animal" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      },
+      "put": {
+        "operationId": "replaceAnimal",
+        "requestBody": { "content": { "application/json": { "schema": { "anyOf": [ { "$ref": "#/components/schemas/Dog" }, { "$ref": "#/components/schemas/Cat" } ] } } } },
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/forms": {
+      "post": {
+        "operationId": "submitForm",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" }, "meta": { "type": "object" } } },
+              "encoding": { "meta": { "contentType": "application/json" }, "file": { "contentType": "image/png", "style": "form", "explode": false } }
+            },
+            "application/x-www-form-urlencoded": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } } }
+          }
+        },
+        "responses": { "204": { "description": "Accepted" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Pet": {
+        "type": "object",
+        "required": ["name"],
+        "discriminator": { "propertyName": "kind", "mapping": { "dog": "#/components/schemas/Dog", "cat": "#/components/schemas/Cat" } },
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string" },
+          "id": { "type": "string", "readOnly": true },
+          "secret": { "type": "string", "writeOnly": true }
+        }
+      },
+      "Dog": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Pet" },
+          { "type": "object", "required": ["bark"], "properties": { "bark": { "type": "boolean" } } }
+        ],
+        "properties": { "name": { "type": "string", "description": "Dog name overrides Pet name" } }
+      },
+      "Cat": {
+        "allOf": [ { "$ref": "#/components/schemas/Pet" } ],
+        "properties": { "lives": { "type": "integer" } }
+      },
+      "Animal": {
+        "oneOf": [ { "$ref": "#/components/schemas/Dog" }, { "$ref": "#/components/schemas/Cat" } ],
+        "discriminator": { "propertyName": "kind" }
+      },
+      "NullablePet": {
+        "allOf": [ { "$ref": "#/components/schemas/Pet" } ],
+        "nullable": true,
+        "description": "A pet or null"
+      },
+      "Tags": { "type": "object", "additionalProperties": { "type": "string" } },
+      "Closed": { "properties": { "a": { "type": "string" } }, "additionalProperties": false },
+      "Matrix": { "items": { "type": "array", "items": { "type": "number" } } },
+      "PetWithNote": { "$ref": "#/components/schemas/Pet", "description": "Sibling description is applied to a copy" }
+    }
+  }
+}

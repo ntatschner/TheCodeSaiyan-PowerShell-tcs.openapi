@@ -1,0 +1,125 @@
+TOPIC
+    about_tcs.openapi
+
+SHORT DESCRIPTION
+    Generates PowerShell modules from OpenAPI 3.0/3.1 and Swagger 2.0
+    documents, and provides the request engine those modules use.
+
+LONG DESCRIPTION
+    tcs.openapi has two halves.
+
+    The generator (Import-OpenApiDocument, Test-OpenApiDocument and
+    New-OpenApiModule) reads a document, normalises it to one OpenAPI
+    3-shaped model, reports problems as findings and writes a module with
+    one thin wrapper command per operation.
+
+    The runtime (Set-, Get-, Remove-OpenApiContext and Invoke-OpenApiRequest)
+    is the engine every generated module calls: authentication, parameter
+    serialisation, request bodies, retry, paging, errors and downloads.
+    Generated modules list tcs.openapi in RequiredModules, so updating
+    tcs.openapi fixes every generated module without regenerating it.
+
+    Both halves run on Windows PowerShell 5.1 and PowerShell 7 (Windows,
+    Linux and macOS). tcs.openapi requires tcs.core 0.4.0.
+
+QUICK START
+    Check the document, generate a module, import it and call it:
+
+        Test-OpenApiDocument -Path ./petstore.json |
+            Where-Object Severity -NE 'Information'
+
+        New-OpenApiModule -Path ./petstore.json -ModuleName PetStore `
+            -NounPrefix PetStore -OutputPath ./out
+
+        Import-Module ./out/PetStore/PetStore.psd1
+        Set-PetStoreContext -ApiKey (Read-Host -AsSecureString -Prompt 'Key')
+        Get-PetStorePet -Status available -All
+
+    Always set -NounPrefix. There is no default prefix, so without one the
+    command nouns come straight from the operationIds and easily clash with
+    other modules. A name that would shadow a core PowerShell command
+    (Get-Item, New-Item, ...) gets the PascalCase module name as its prefix
+    instead, with finding OA042.
+
+THE GENERATED MODULE
+    <OutputPath>/<ModuleName>/
+        <ModuleName>.psd1         manifest; RequiredModules tcs.openapi
+        <ModuleName>.psm1         loads the metadata, the commands, then
+                                  Overrides.ps1
+        OpenApi/operations.json   operation metadata used by the engine
+        OpenApi/source.json       the normalised document
+        Public/<Tag>/<Verb>-<Noun>.ps1   one command per operation
+        Public/_Connection/       Set-, Get- and Remove-<Prefix>Context
+        Overrides.ps1             yours: never overwritten
+        README.md                 the list of commands
+
+    Regenerate with -Force to replace generated files. Overrides.ps1 is
+    created once and never replaced: a function defined there replaces the
+    generated command of the same name.
+
+CONNECTIONS AND AUTHENTICATION
+    Set-<Prefix>Context (or Set-OpenApiContext -Service <ModuleName>) stores
+    the base URI and credentials for the session. -BaseUri defaults to the
+    first absolute http(s) server of the document.
+
+        apiKey (header, query or cookie)   -ApiKey <SecureString>
+        http basic                         -Credential <PSCredential>
+        http bearer                        -BearerToken <SecureString>
+        oauth2 clientCredentials           -ClientId -ClientSecret
+                                           [-TokenUri] [-Scope]
+        oauth2 / openIdConnect with a token you already have
+                                           -BearerToken
+
+    The engine uses the first security requirement of the operation (or
+    of the document) whose schemes all have credentials in the context.
+    security: [] sends no credentials. OAuth2 tokens are cached until 60
+    seconds before they expire and fetched again once after a 401.
+
+    -Persist saves the settings as JSON and the secrets with tcs.core
+    Set-ModuleSecret; a later session loads them on first use.
+    Get-<Prefix>Context shows every secret as ********.
+
+PAGING, DOWNLOADS AND RAW RESPONSES
+    Pageable operations (x-ms-pageable, a nextLink/next/@odata.nextLink
+    property next to one array, or a Link response header) get -All, which
+    follows the next links (same host only) and streams the items as they
+    arrive. Without -All one page is returned. Either way the output is
+    the items, typed with the item schema name ('<Service>.<Schema>').
+
+    Operations with a binary response get -OutFile, which streams the body
+    to a file and returns the FileInfo. Without -OutFile the bytes are
+    returned as one byte[].
+
+    -Raw returns { StatusCode, Headers, Content } instead of objects.
+
+ERRORS, RETRY AND LOGGING
+    A non-2xx response is a non-terminating error with the id
+    OpenApi.<Service>.<StatusCode>; transport failures use
+    OpenApi.<Service>.Connection. TargetObject holds the method, URI,
+    status, headers, the parsed (problem+json) body and the operationId.
+    -ErrorAction and pipelines behave as for any cmdlet.
+
+    408, 429, 500, 502, 503 and 504 are retried for idempotent methods, 429
+    and 503 only for POST and PATCH, honouring Retry-After (MaxRetries in
+    the context, default 3).
+
+    -Verbose shows each request line and status; -Debug adds headers and
+    bodies with Authorization, cookies, api keys and properties named like
+    password, secret or token replaced by ********.
+
+NAMING
+    x-ps-name (a full Verb-Noun) wins, then x-ps-verb and x-ps-noun. Otherwise
+    the verb comes from the first word of the operationId (get/list -> Get,
+    create/add -> New, update -> Set or Update, delete -> Remove, ...) or
+    from the HTTP method, and the rest is the noun: <NounPrefix> plus the
+    PascalCase words, with the last word singular. Collisions add a path
+    segment or the method (OA040); parameters that clash with common
+    parameters get a location suffix (OA041).
+
+SEE ALSO
+    Import-OpenApiDocument
+    Test-OpenApiDocument
+    New-OpenApiModule
+    Set-OpenApiContext
+    Invoke-OpenApiRequest
+    https://github.com/ntatschner/TheCodeSaiyan-PowerShell-tcs.openapi

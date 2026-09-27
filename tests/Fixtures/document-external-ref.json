@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "External references", "version": "1.0.0" },
+  "paths": {
+    "/remote": {
+      "get": {
+        "operationId": "getRemote",
+        "parameters": [ { "name": "filter", "in": "query", "schema": { "$ref": "common.json#/components/schemas/Filter" } } ],
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/wrapped": {
+      "get": {
+        "operationId": "getWrapped",
+        "responses": { "200": { "description": "ok", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Wrapper" } } } } }
+      }
+    },
+    "/shared": {
+      "get": {
+        "operationId": "getShared",
+        "parameters": [ { "$ref": "https://example.com/params.json#/Page" } ],
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/local": {
+      "get": {
+        "operationId": "getLocal",
+        "responses": { "200": { "description": "ok", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Local" } } } } }
+      }
+    },
+    "/missing": {
+      "get": {
+        "operationId": "getMissing",
+        "responses": { "200": { "description": "ok", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DoesNotExist" } } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Wrapper": {
+        "type": "object",
+        "properties": { "inner": { "$ref": "./models.yaml#/Inner" } }
+      },
+      "Local": { "type": "object", "properties": { "id": { "type": "string" } } }
+    }
+  }
+}
