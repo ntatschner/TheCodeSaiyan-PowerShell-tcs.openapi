@@ -12,7 +12,7 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiErrorRecord' {
+Describe 'New-OpenApiErrorRecord' {
     It 'builds an HTTP error record from a response' {
         InModuleScope -ModuleName tcs.openapi {
             $response = [pscustomobject]@{
@@ -20,7 +20,7 @@ Describe 'Build-OpenApiErrorRecord' {
                 Headers = @{ 'Content-Type' = 'application/problem+json' }; ContentType = 'application/problem+json'; Message = $null
                 Body = [System.Text.Encoding]::UTF8.GetBytes('{"title":"Denied","detail":"No access."}')
             }
-            $record = Build-OpenApiErrorRecord -Service 'Svc' -OperationId 'op' -Method 'GET' -Uri 'https://a/x?api_key=secret' -Response $response -SensitiveName 'api_key'
+            $record = New-OpenApiErrorRecord -Service 'Svc' -OperationId 'op' -Method 'GET' -Uri 'https://a/x?api_key=secret' -Response $response -SensitiveName 'api_key'
             $record.FullyQualifiedErrorId | Should -Be 'OpenApi.Svc.403'
             $record.CategoryInfo.Category | Should -Be 'PermissionDenied'
             $record.Exception | Should -BeOfType ([System.Net.Http.HttpRequestException])
@@ -36,7 +36,7 @@ Describe 'Build-OpenApiErrorRecord' {
     It 'builds a record for an exception with the given kind and category' {
         InModuleScope -ModuleName tcs.openapi {
             $exception = New-Object System.Net.Http.HttpRequestException -ArgumentList 'refused'
-            $record = Build-OpenApiErrorRecord -Service 'Svc' -Method 'GET' -Uri 'https://a' -Exception $exception -Kind 'Connection' -Category ConnectionError
+            $record = New-OpenApiErrorRecord -Service 'Svc' -Method 'GET' -Uri 'https://a' -Exception $exception -Kind 'Connection' -Category ConnectionError
             $record.FullyQualifiedErrorId | Should -Be 'OpenApi.Svc.Connection'
             $record.CategoryInfo.Category | Should -Be 'ConnectionError'
             $record.Exception.Message | Should -Be 'refused'

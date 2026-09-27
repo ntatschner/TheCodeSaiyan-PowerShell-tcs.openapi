@@ -77,7 +77,7 @@ function Invoke-OpenApiHttpExchange {
         $attempt = {
             $response = Send-OpenApiHttpRequest -Client $Client -Method $Method -Uri $requestUri -Header $requestHeaders -ContentFactory $ContentFactory -SensitiveName $names
             if ($policy.StatusCodes -contains $response.StatusCode) {
-                throw (Build-OpenApiRetryException -Response $response)
+                throw (New-OpenApiRetryException -Response $response)
             }
             $response
         }

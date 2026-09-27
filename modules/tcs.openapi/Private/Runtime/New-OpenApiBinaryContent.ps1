@@ -1,8 +1,9 @@
-function Build-OpenApiBinaryContent {
+function New-OpenApiBinaryContent {
     <#
     .SYNOPSIS
         Creates HttpContent from a byte array, a stream, a FileInfo or text (sent as UTF-8 bytes); -KeepStreamOpen sends a seekable stream without copying or closing it.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([System.Net.Http.HttpContent])]
     param(

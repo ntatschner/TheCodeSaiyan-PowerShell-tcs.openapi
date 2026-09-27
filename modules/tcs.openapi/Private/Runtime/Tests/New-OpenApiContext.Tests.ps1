@@ -12,10 +12,10 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiContext' {
+Describe 'New-OpenApiContext' {
     It 'creates a context with defaults and a trimmed base URI' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = Build-OpenApiContext -Service 'Svc' -BaseUri 'https://api.example.com/v1/'
+            $context = New-OpenApiContext -Service 'Svc' -BaseUri 'https://api.example.com/v1/'
             $context.PSObject.TypeNames[0] | Should -Be 'Tcs.OpenApi.ContextData'
             $context.BaseUri | Should -Be 'https://api.example.com/v1'
             $context.TimeoutSec | Should -Be 100
@@ -30,7 +30,7 @@ Describe 'Build-OpenApiContext' {
     It 'copies headers as strings and keeps secrets as SecureString' {
         InModuleScope -ModuleName tcs.openapi {
             $key = ConvertTo-SecureString -String 'k' -AsPlainText -Force
-            $context = Build-OpenApiContext -Service 'Svc' -BaseUri 'https://a' -ApiKey $key -Header @{ 'X-Num' = 5 } -Scope @('a', '', 'b')
+            $context = New-OpenApiContext -Service 'Svc' -BaseUri 'https://a' -ApiKey $key -Header @{ 'X-Num' = 5 } -Scope @('a', '', 'b')
             $context.ApiKey | Should -BeOfType ([System.Security.SecureString])
             $context.Header['X-Num'] | Should -BeExactly '5'
             $context.Scope | Should -Be @('a', 'b')

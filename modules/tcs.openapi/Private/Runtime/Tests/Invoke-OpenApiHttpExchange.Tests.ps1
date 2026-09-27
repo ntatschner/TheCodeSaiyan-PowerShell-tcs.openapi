@@ -18,7 +18,7 @@ Describe 'Invoke-OpenApiHttpExchange' {
     BeforeAll {
         $script:server = Start-TestHttpServer -Handler { param($Request) @{ Body = @{ ok = $true } } }
         InModuleScope -ModuleName tcs.openapi -Parameters @{ BaseUri = $script:server.BaseUri } {
-            $script:testContext = Build-OpenApiContext -Service 'Ex' -BaseUri $BaseUri -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force) -MaxRetries 2
+            $script:testContext = New-OpenApiContext -Service 'Ex' -BaseUri $BaseUri -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force) -MaxRetries 2
             $script:testClient = Get-OpenApiHttpClient -Context $script:testContext
             $script:testOperation = @{ Security = @(@{ q = @() }); SecuritySchemes = @{ q = @{ Type = 'apiKey'; In = 'query'; ParameterName = 'key' } } }
         }
@@ -70,7 +70,7 @@ Describe 'Invoke-OpenApiHttpExchange' {
     It 'rebuilds the body for every attempt' {
         $script:server.Enqueue(@{ StatusCode = 429 })
         $null = InModuleScope -ModuleName tcs.openapi -Parameters @{ BaseUri = $script:server.BaseUri } {
-            $factory = { Build-OpenApiHttpContent -Body @{ a = 1 } -ContentType 'application/json' }
+            $factory = { New-OpenApiHttpContent -Body @{ a = 1 } -ContentType 'application/json' }
             $response = Invoke-OpenApiHttpExchange -Context $script:testContext -Operation $script:testOperation -Client $script:testClient -Method 'POST' -Uri "$BaseUri/x" -ContentFactory $factory
             $response.Message.Dispose()
         }

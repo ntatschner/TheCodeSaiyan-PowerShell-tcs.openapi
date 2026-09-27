@@ -12,10 +12,10 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiHttpClientHandler' {
+Describe 'New-OpenApiHttpClientHandler' {
     It 'enables decompression and disables the cookie container' {
         InModuleScope -ModuleName tcs.openapi {
-            $handler = Build-OpenApiHttpClientHandler -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a')
+            $handler = New-OpenApiHttpClientHandler -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a')
             $handler.AutomaticDecompression.HasFlag([System.Net.DecompressionMethods]::GZip) | Should -BeTrue
             $handler.AutomaticDecompression.HasFlag([System.Net.DecompressionMethods]::Deflate) | Should -BeTrue
             $handler.UseCookies | Should -BeFalse
@@ -27,7 +27,7 @@ Describe 'Build-OpenApiHttpClientHandler' {
     It 'sets the proxy with its credential' {
         InModuleScope -ModuleName tcs.openapi {
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'proxyuser', (ConvertTo-SecureString -String 'pw' -AsPlainText -Force)
-            $handler = Build-OpenApiHttpClientHandler -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -Proxy 'http://proxy.local:8080/' -ProxyCredential $credential)
+            $handler = New-OpenApiHttpClientHandler -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -Proxy 'http://proxy.local:8080/' -ProxyCredential $credential)
             $handler.UseProxy | Should -BeTrue
             $handler.Proxy.Address.AbsoluteUri | Should -Be 'http://proxy.local:8080/'
             $handler.Proxy.Credentials.UserName | Should -Be 'proxyuser'
@@ -37,7 +37,7 @@ Describe 'Build-OpenApiHttpClientHandler' {
 
     It 'accepts any certificate with SkipCertificateCheck' {
         InModuleScope -ModuleName tcs.openapi {
-            $handler = Build-OpenApiHttpClientHandler -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -SkipCertificateCheck $true)
+            $handler = New-OpenApiHttpClientHandler -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -SkipCertificateCheck $true)
             $handler.ServerCertificateCustomValidationCallback | Should -Not -BeNullOrEmpty
             $handler.ServerCertificateCustomValidationCallback.Invoke($null, $null, $null, [System.Net.Security.SslPolicyErrors]::RemoteCertificateChainErrors) | Should -BeTrue
             $handler.Dispose()

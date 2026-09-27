@@ -59,5 +59,5 @@ function Import-OpenApiPersistedContext {
         MaxRetries           = $maxRetries
         Persisted            = $true
     }
-    return (Build-OpenApiContext @contextParameters)
+    return (New-OpenApiContext @contextParameters)
 }

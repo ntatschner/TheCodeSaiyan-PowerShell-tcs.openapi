@@ -12,10 +12,10 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiHttpContent' {
+Describe 'New-OpenApiHttpContent' {
     It 'serialises JSON with charset utf-8' {
         InModuleScope -ModuleName tcs.openapi {
-            $content = Build-OpenApiHttpContent -Body ([ordered]@{ a = $null; b = @(1) }) -ContentType 'application/json'
+            $content = New-OpenApiHttpContent -Body ([ordered]@{ a = $null; b = @(1) }) -ContentType 'application/json'
             $content.Headers.ContentType.ToString() | Should -Be 'application/json; charset=utf-8'
             $content.ReadAsStringAsync().GetAwaiter().GetResult() | Should -Be '{"a":null,"b":[1]}'
         }
@@ -23,7 +23,7 @@ Describe 'Build-OpenApiHttpContent' {
 
     It 'keeps content type parameters and a given charset' {
         InModuleScope -ModuleName tcs.openapi {
-            $content = Build-OpenApiHttpContent -Body @{ a = 1 } -ContentType 'application/merge-patch+json; charset=utf-16'
+            $content = New-OpenApiHttpContent -Body @{ a = 1 } -ContentType 'application/merge-patch+json; charset=utf-16'
             $content.Headers.ContentType.MediaType | Should -Be 'application/merge-patch+json'
             $content.Headers.ContentType.CharSet | Should -Be 'utf-16'
         }
@@ -31,17 +31,17 @@ Describe 'Build-OpenApiHttpContent' {
 
     It 'sends explicit null as JSON null' {
         InModuleScope -ModuleName tcs.openapi {
-            (Build-OpenApiHttpContent -Body $null -ContentType 'application/json').ReadAsStringAsync().GetAwaiter().GetResult() | Should -Be 'null'
+            (New-OpenApiHttpContent -Body $null -ContentType 'application/json').ReadAsStringAsync().GetAwaiter().GetResult() | Should -Be 'null'
         }
     }
 
     It 'encodes forms, text and binary bodies' {
         InModuleScope -ModuleName tcs.openapi {
-            $form = Build-OpenApiHttpContent -Body ([ordered]@{ a = 'x y' }) -ContentType 'application/x-www-form-urlencoded'
+            $form = New-OpenApiHttpContent -Body ([ordered]@{ a = 'x y' }) -ContentType 'application/x-www-form-urlencoded'
             $form.ReadAsStringAsync().GetAwaiter().GetResult() | Should -Be 'a=x%20y'
-            $text = Build-OpenApiHttpContent -Body '<a/>' -ContentType 'application/xml'
+            $text = New-OpenApiHttpContent -Body '<a/>' -ContentType 'application/xml'
             $text.Headers.ContentType.ToString() | Should -Be 'application/xml; charset=utf-8'
-            $binary = Build-OpenApiHttpContent -Body ([byte[]](9, 8)) -ContentType 'application/octet-stream'
+            $binary = New-OpenApiHttpContent -Body ([byte[]](9, 8)) -ContentType 'application/octet-stream'
             $binary.Headers.ContentType.ToString() | Should -Be 'application/octet-stream'
             $binary.ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be ([byte[]](9, 8))
         }
@@ -49,7 +49,7 @@ Describe 'Build-OpenApiHttpContent' {
 
     It 'returns multipart content as one object' {
         InModuleScope -ModuleName tcs.openapi {
-            $content = Build-OpenApiHttpContent -Body @{ a = 'b' } -ContentType 'multipart/form-data'
+            $content = New-OpenApiHttpContent -Body @{ a = 'b' } -ContentType 'multipart/form-data'
             # The content is a collection of parts; it must come back as the multipart object itself
             , $content | Should -BeOfType ([System.Net.Http.MultipartFormDataContent])
         }

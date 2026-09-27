@@ -1,8 +1,9 @@
-function Build-OpenApiHttpContent {
+function New-OpenApiHttpContent {
     <#
     .SYNOPSIS
         Creates the System.Net.Http.HttpContent for a request body according to its content type (JSON, form, multipart, text or binary).
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([System.Net.Http.HttpContent])]
     param(
@@ -41,7 +42,7 @@ function Build-OpenApiHttpContent {
             return $content
         }
         'Multipart' {
-            $multipart = Build-OpenApiMultipartContent -Body $Body -MediaType $mediaType
+            $multipart = New-OpenApiMultipartContent -Body $Body -MediaType $mediaType
             return , $multipart
         }
         'Text' {
@@ -59,7 +60,7 @@ function Build-OpenApiHttpContent {
             return $content
         }
         default {
-            $content = Build-OpenApiBinaryContent -Value $Body -KeepStreamOpen
+            $content = New-OpenApiBinaryContent -Value $Body -KeepStreamOpen
             $content.Headers.ContentType = $mediaType
             return $content
         }

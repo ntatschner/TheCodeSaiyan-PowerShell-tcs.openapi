@@ -1,8 +1,9 @@
-function Build-OpenApiMultipartContent {
+function New-OpenApiMultipartContent {
     <#
     .SYNOPSIS
         Creates MultipartFormDataContent from a hashtable: FileInfo, byte[] and stream values become file parts, objects JSON parts, others text parts.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([System.Net.Http.MultipartFormDataContent])]
     param(
@@ -44,12 +45,12 @@ function Build-OpenApiMultipartContent {
                 $value = $value.PSObject.BaseObject
             }
             if ($value -is [System.IO.FileInfo]) {
-                $part = Build-OpenApiBinaryContent -Value $value
+                $part = New-OpenApiBinaryContent -Value $value
                 $part.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse('application/octet-stream')
                 $multipart.Add($part, $property.Name, $value.Name)
             }
             elseif ($value -is [byte[]] -or $value -is [System.IO.Stream]) {
-                $part = Build-OpenApiBinaryContent -Value $value
+                $part = New-OpenApiBinaryContent -Value $value
                 $part.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse('application/octet-stream')
                 $multipart.Add($part, $property.Name, $property.Name)
             }

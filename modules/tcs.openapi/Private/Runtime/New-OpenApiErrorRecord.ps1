@@ -1,8 +1,9 @@
-function Build-OpenApiErrorRecord {
+function New-OpenApiErrorRecord {
     <#
     .SYNOPSIS
         Creates the ErrorRecord for a failed request: FullyQualifiedErrorId OpenApi.<Service>.<StatusCode|Kind>, a category from the status and a TargetObject describing the request.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding(DefaultParameterSetName = 'Http')]
     [OutputType([System.Management.Automation.ErrorRecord])]
     param(

@@ -190,7 +190,7 @@ function Set-OpenApiContext {
             MaxRetries           = $MaxRetries
             Persisted            = [bool]$Persist
         }
-        $context = Build-OpenApiContext @contextParameters
+        $context = New-OpenApiContext @contextParameters
 
         $target = "OpenAPI context '$Service' ($($context.BaseUri))"
         $action = 'Set connection'

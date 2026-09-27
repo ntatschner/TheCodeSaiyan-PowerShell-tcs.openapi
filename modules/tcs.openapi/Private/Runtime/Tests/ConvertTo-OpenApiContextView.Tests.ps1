@@ -17,7 +17,7 @@ Describe 'ConvertTo-OpenApiContextView' {
         InModuleScope -ModuleName tcs.openapi {
             $secret = ConvertTo-SecureString -String 'plain-secret' -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'user', $secret
-            $context = Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -BearerToken $secret -ClientId 'app' -ClientSecret $secret -Credential $credential -ProxyCredential $credential -Header @{ 'X-Api-Token' = 'tok'; 'X-Tenant' = 't1' }
+            $context = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -BearerToken $secret -ClientId 'app' -ClientSecret $secret -Credential $credential -ProxyCredential $credential -Header @{ 'X-Api-Token' = 'tok'; 'X-Tenant' = 't1' }
             $view = ConvertTo-OpenApiContextView -Context $context
             $view.PSObject.TypeNames[0] | Should -Be 'Tcs.OpenApi.Context'
             $view.ApiKey | Should -Be '********'
@@ -34,7 +34,7 @@ Describe 'ConvertTo-OpenApiContextView' {
 
     It 'shows missing secrets as empty' {
         InModuleScope -ModuleName tcs.openapi {
-            $view = ConvertTo-OpenApiContextView -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a')
+            $view = ConvertTo-OpenApiContextView -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a')
             $view.ApiKey | Should -BeNullOrEmpty
             $view.Credential | Should -BeNullOrEmpty
         }

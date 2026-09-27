@@ -16,9 +16,9 @@ Describe 'Get-OpenApiTokenUri' {
     It 'prefers the context TokenUri, else the clientCredentials flow' {
         InModuleScope -ModuleName tcs.openapi {
             $scheme = @{ Type = 'oauth2'; Flows = @{ clientCredentials = @{ TokenUrl = 'https://flow/token' } } }
-            Get-OpenApiTokenUri -Scheme $scheme -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -TokenUri 'https://ctx/token') | Should -Be 'https://ctx/token'
-            Get-OpenApiTokenUri -Scheme $scheme -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a') | Should -Be 'https://flow/token'
-            Get-OpenApiTokenUri -Scheme @{ Type = 'oauth2' } -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a') | Should -BeNullOrEmpty
+            Get-OpenApiTokenUri -Scheme $scheme -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -TokenUri 'https://ctx/token') | Should -Be 'https://ctx/token'
+            Get-OpenApiTokenUri -Scheme $scheme -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a') | Should -Be 'https://flow/token'
+            Get-OpenApiTokenUri -Scheme @{ Type = 'oauth2' } -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a') | Should -BeNullOrEmpty
         }
     }
 }

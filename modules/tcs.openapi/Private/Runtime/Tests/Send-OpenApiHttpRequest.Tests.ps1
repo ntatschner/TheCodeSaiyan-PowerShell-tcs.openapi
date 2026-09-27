@@ -31,7 +31,7 @@ Describe 'Send-OpenApiHttpRequest' {
 
     It 'sends method, headers and content and returns status, headers and the open message' {
         $response = InModuleScope -ModuleName tcs.openapi -Parameters @{ BaseUri = $script:server.BaseUri } {
-            $factory = { Build-OpenApiHttpContent -Body 'hi' -ContentType 'text/plain' }
+            $factory = { New-OpenApiHttpContent -Body 'hi' -ContentType 'text/plain' }
             Send-OpenApiHttpRequest -Client $script:testClient -Method 'patch' -Uri "$BaseUri/a?b=1" -Header ([ordered]@{ 'X-One' = '1'; 'Content-Language' = 'en' }) -ContentFactory $factory
         }
         $response.PSObject.TypeNames[0] | Should -Be 'Tcs.OpenApi.HttpResponse'

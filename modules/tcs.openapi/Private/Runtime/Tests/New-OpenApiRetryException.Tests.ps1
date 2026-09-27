@@ -12,11 +12,11 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiRetryException' {
+Describe 'New-OpenApiRetryException' {
     It 'exposes the status code and Retry-After to tcs.core' {
         InModuleScope -ModuleName tcs.openapi {
             $response = [pscustomobject]@{ Method = 'GET'; Uri = 'https://a'; StatusCode = 429; ReasonPhrase = 'Too Many Requests'; Headers = @{ 'Retry-After' = '7' }; ContentType = $null; Message = $null; Body = [byte[]]@() }
-            $exception = Build-OpenApiRetryException -Response $response
+            $exception = New-OpenApiRetryException -Response $response
             $exception | Should -BeOfType ([System.Net.Http.HttpRequestException])
             $exception.TcsOpenApiResponse | Should -Be $response
             $detail = Get-HttpErrorDetail -ErrorRecord $exception

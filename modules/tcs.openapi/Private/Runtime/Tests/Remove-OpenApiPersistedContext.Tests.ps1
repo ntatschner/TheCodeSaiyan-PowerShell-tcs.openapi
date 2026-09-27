@@ -15,7 +15,7 @@ AfterAll {
 Describe 'Remove-OpenApiPersistedContext' {
     It 'deletes the settings file and the saved secrets' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = Build-OpenApiContext -Service 'Gone' -BaseUri 'https://a' -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force)
+            $context = New-OpenApiContext -Service 'Gone' -BaseUri 'https://a' -ApiKey (ConvertTo-SecureString -String 'k' -AsPlainText -Force)
             Save-OpenApiContextSetting -Context $context
             Remove-OpenApiPersistedContext -Service 'Gone' -Confirm:$false | Should -BeTrue
             Test-Path -LiteralPath (Get-OpenApiContextSettingPath -Service 'Gone') | Should -BeFalse
@@ -26,7 +26,7 @@ Describe 'Remove-OpenApiPersistedContext' {
 
     It 'changes nothing with -WhatIf' {
         InModuleScope -ModuleName tcs.openapi {
-            Save-OpenApiContextSetting -Context (Build-OpenApiContext -Service 'Kept' -BaseUri 'https://a')
+            Save-OpenApiContextSetting -Context (New-OpenApiContext -Service 'Kept' -BaseUri 'https://a')
             Remove-OpenApiPersistedContext -Service 'Kept' -WhatIf | Should -BeFalse
             Test-Path -LiteralPath (Get-OpenApiContextSettingPath -Service 'Kept') | Should -BeTrue
         }

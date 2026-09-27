@@ -1,8 +1,9 @@
-function Build-OpenApiContext {
+function New-OpenApiContext {
     <#
     .SYNOPSIS
         Creates the context object held in the module-scope store for one service.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param(

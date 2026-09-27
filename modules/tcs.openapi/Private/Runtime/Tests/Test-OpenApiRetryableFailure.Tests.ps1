@@ -18,7 +18,7 @@ Describe 'Test-OpenApiRetryableFailure' {
             $idempotent = [pscustomobject]@{ RetryConnectionFailure = $true }
             $nonIdempotent = [pscustomobject]@{ RetryConnectionFailure = $false }
             $response = [pscustomobject]@{ Method = 'POST'; StatusCode = 429; ReasonPhrase = 'x'; Headers = @{}; Message = $null; Body = [byte[]]@() }
-            $httpFailure = Build-OpenApiRetryException -Response $response
+            $httpFailure = New-OpenApiRetryException -Response $response
             Test-OpenApiRetryableFailure -ErrorRecord $httpFailure -Policy $nonIdempotent | Should -BeTrue
 
             $transport = New-Object System.Net.Http.HttpRequestException -ArgumentList 'refused'

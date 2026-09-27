@@ -1,8 +1,9 @@
-function Build-OpenApiHttpClientHandler {
+function New-OpenApiHttpClientHandler {
     <#
     .SYNOPSIS
         Creates the HttpClientHandler for a context: automatic decompression, proxy and proxy credentials, and certificate checks.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([System.Net.Http.HttpClientHandler])]
     param(

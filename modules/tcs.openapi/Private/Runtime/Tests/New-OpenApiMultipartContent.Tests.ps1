@@ -12,13 +12,13 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiMultipartContent' {
+Describe 'New-OpenApiMultipartContent' {
     It 'creates one part per value with the right part types' {
         InModuleScope -ModuleName tcs.openapi {
             $path = Join-Path -Path $TestDrive -ChildPath 'f.txt'
             [System.IO.File]::WriteAllText($path, 'file')
             $body = [ordered]@{ text = 'v'; list = @(1, 2); file = Get-Item -LiteralPath $path; bytes = [byte[]](1); json = @{ a = 1 } }
-            $content = Build-OpenApiMultipartContent -Body $body
+            $content = New-OpenApiMultipartContent -Body $body
             $parts = @($content.GetEnumerator())
             $parts.Count | Should -Be 6
             $parts[0].Headers.ContentType.MediaType | Should -Be 'text/plain'
@@ -32,14 +32,14 @@ Describe 'Build-OpenApiMultipartContent' {
     It 'uses the boundary given in the content type' {
         InModuleScope -ModuleName tcs.openapi {
             $mediaType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse('multipart/form-data; boundary=abc123')
-            $content = Build-OpenApiMultipartContent -Body @{ a = 'b' } -MediaType $mediaType
+            $content = New-OpenApiMultipartContent -Body @{ a = 'b' } -MediaType $mediaType
             $content.Headers.ContentType.ToString() | Should -Match 'boundary="?abc123"?'
         }
     }
 
     It 'rejects a body that is not a hashtable' {
         InModuleScope -ModuleName tcs.openapi {
-            { Build-OpenApiMultipartContent -Body 'text' } | Should -Throw -ExceptionType ([System.ArgumentException])
+            { New-OpenApiMultipartContent -Body 'text' } | Should -Throw -ExceptionType ([System.ArgumentException])
         }
     }
 }

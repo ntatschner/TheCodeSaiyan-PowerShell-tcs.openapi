@@ -23,7 +23,7 @@ Describe 'Import-OpenApiPersistedContext' {
         InModuleScope -ModuleName tcs.openapi {
             $secret = ConvertTo-SecureString -String 'key-1' -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', (ConvertTo-SecureString -String 'pw' -AsPlainText -Force)
-            $context = Build-OpenApiContext -Service 'Saved' -BaseUri 'https://a/v2' -ApiKey $secret -Credential $credential -ClientId 'app' -TokenUri 'https://t' -Scope 's1' -Header @{ 'X-T' = '1' } -TimeoutSec 7 -MaxRetries 1 -Proxy 'http://p:1/' -SkipCertificateCheck $true
+            $context = New-OpenApiContext -Service 'Saved' -BaseUri 'https://a/v2' -ApiKey $secret -Credential $credential -ClientId 'app' -TokenUri 'https://t' -Scope 's1' -Header @{ 'X-T' = '1' } -TimeoutSec 7 -MaxRetries 1 -Proxy 'http://p:1/' -SkipCertificateCheck $true
             Save-OpenApiContextSetting -Context $context
             $loaded = Import-OpenApiPersistedContext -Service 'Saved'
             $loaded.BaseUri | Should -Be 'https://a/v2'
@@ -45,7 +45,7 @@ Describe 'Import-OpenApiPersistedContext' {
 
     It 'warns and continues when a saved secret cannot be read' {
         InModuleScope -ModuleName tcs.openapi {
-            $context = Build-OpenApiContext -Service 'Broken' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 't' -AsPlainText -Force)
+            $context = New-OpenApiContext -Service 'Broken' -BaseUri 'https://a' -BearerToken (ConvertTo-SecureString -String 't' -AsPlainText -Force)
             Save-OpenApiContextSetting -Context $context
             Remove-ModuleSecret -ModuleName 'tcs.openapi' -Name 'Broken.BearerToken' -Confirm:$false
             $warnings = $null

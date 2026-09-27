@@ -12,24 +12,24 @@ AfterAll {
     Remove-Module -Name tcs.openapi -Force -ErrorAction SilentlyContinue
 }
 
-Describe 'Build-OpenApiBinaryContent' {
+Describe 'New-OpenApiBinaryContent' {
     It 'creates content from a byte array, a file, a stream and text' {
         InModuleScope -ModuleName tcs.openapi {
             $bytes = [byte[]](1, 2, 3)
-            (Build-OpenApiBinaryContent -Value $bytes).ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be $bytes
+            (New-OpenApiBinaryContent -Value $bytes).ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be $bytes
 
             $path = Join-Path -Path $TestDrive -ChildPath 'b.bin'
             [System.IO.File]::WriteAllBytes($path, $bytes)
-            $content = Build-OpenApiBinaryContent -Value (Get-Item -LiteralPath $path)
+            $content = New-OpenApiBinaryContent -Value (Get-Item -LiteralPath $path)
             $content.ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be $bytes
             $content.Dispose()
 
             $stream = New-Object System.IO.MemoryStream -ArgumentList (, $bytes)
             $stream.Position = 3
-            (Build-OpenApiBinaryContent -Value $stream).ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be $bytes
+            (New-OpenApiBinaryContent -Value $stream).ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be $bytes
 
-            [System.Text.Encoding]::UTF8.GetString((Build-OpenApiBinaryContent -Value 'hi').ReadAsByteArrayAsync().GetAwaiter().GetResult()) | Should -Be 'hi'
-            (Build-OpenApiBinaryContent -Value $null).ReadAsByteArrayAsync().GetAwaiter().GetResult().Length | Should -Be 0
+            [System.Text.Encoding]::UTF8.GetString((New-OpenApiBinaryContent -Value 'hi').ReadAsByteArrayAsync().GetAwaiter().GetResult()) | Should -Be 'hi'
+            (New-OpenApiBinaryContent -Value $null).ReadAsByteArrayAsync().GetAwaiter().GetResult().Length | Should -Be 0
         }
     }
 
@@ -37,7 +37,7 @@ Describe 'Build-OpenApiBinaryContent' {
         InModuleScope -ModuleName tcs.openapi {
             $stream = New-Object System.IO.MemoryStream -ArgumentList (, [byte[]](1, 2, 3))
             $stream.Position = 2
-            $content = Build-OpenApiBinaryContent -Value $stream -KeepStreamOpen
+            $content = New-OpenApiBinaryContent -Value $stream -KeepStreamOpen
             $content | Should -BeOfType ([System.Net.Http.StreamContent])
             $content.PSObject.Properties['TcsOpenApiKeepOpen'] | Should -Not -BeNullOrEmpty
             $content.ReadAsByteArrayAsync().GetAwaiter().GetResult() | Should -Be ([byte[]](1, 2, 3))
@@ -47,7 +47,7 @@ Describe 'Build-OpenApiBinaryContent' {
     It 'throws FileNotFoundException for a missing file' {
         InModuleScope -ModuleName tcs.openapi {
             $missing = New-Object System.IO.FileInfo -ArgumentList (Join-Path -Path $TestDrive -ChildPath 'none.bin')
-            { Build-OpenApiBinaryContent -Value $missing } | Should -Throw -ExceptionType ([System.IO.FileNotFoundException])
+            { New-OpenApiBinaryContent -Value $missing } | Should -Throw -ExceptionType ([System.IO.FileNotFoundException])
         }
     }
 }

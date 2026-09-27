@@ -16,7 +16,7 @@ Describe 'Resolve-OpenApiContext' {
     It 'returns the context from the store' {
         InModuleScope -ModuleName tcs.openapi {
             $store = Get-OpenApiContextStore
-            $store['Mem'] = Build-OpenApiContext -Service 'Mem' -BaseUri 'https://mem'
+            $store['Mem'] = New-OpenApiContext -Service 'Mem' -BaseUri 'https://mem'
             (Resolve-OpenApiContext -Service 'Mem').BaseUri | Should -Be 'https://mem'
             $store.Remove('Mem')
         }
@@ -24,7 +24,7 @@ Describe 'Resolve-OpenApiContext' {
 
     It 'loads a saved context once and keeps it in the store' {
         InModuleScope -ModuleName tcs.openapi {
-            Save-OpenApiContextSetting -Context (Build-OpenApiContext -Service 'Lazy' -BaseUri 'https://lazy')
+            Save-OpenApiContextSetting -Context (New-OpenApiContext -Service 'Lazy' -BaseUri 'https://lazy')
             (Get-OpenApiContextStore).ContainsKey('Lazy') | Should -BeFalse
             (Resolve-OpenApiContext -Service 'Lazy').BaseUri | Should -Be 'https://lazy'
             (Get-OpenApiContextStore).ContainsKey('Lazy') | Should -BeTrue

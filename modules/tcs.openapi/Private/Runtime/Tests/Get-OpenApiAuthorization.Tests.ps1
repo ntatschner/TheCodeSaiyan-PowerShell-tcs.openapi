@@ -28,7 +28,7 @@ Describe 'Get-OpenApiAuthorization' {
     It 'returns header, query and cookie credentials for the selected schemes' {
         InModuleScope -ModuleName tcs.openapi {
             $key = ConvertTo-SecureString -String 'k 1' -AsPlainText -Force
-            $context = Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $key
+            $context = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $key
             $schemes = @{
                 h = @{ Type = 'apiKey'; In = 'header'; ParameterName = 'X-Key' }
                 q = @{ Type = 'apiKey'; In = 'query'; ParameterName = 'key' }
@@ -47,10 +47,10 @@ Describe 'Get-OpenApiAuthorization' {
     It 'falls back to the context bearer token or credential without security metadata' {
         InModuleScope -ModuleName tcs.openapi {
             $token = ConvertTo-SecureString -String 't' -AsPlainText -Force
-            $auth = Get-OpenApiAuthorization -Operation @{ OperationId = 'x' } -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken $token) -Client $script:testClient
+            $auth = Get-OpenApiAuthorization -Operation @{ OperationId = 'x' } -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken $token) -Client $script:testClient
             $auth.Header['Authorization'] | Should -Be 'Bearer t'
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', $token
-            $auth = Get-OpenApiAuthorization -Operation @{ OperationId = 'x' } -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -Credential $credential) -Client $script:testClient
+            $auth = Get-OpenApiAuthorization -Operation @{ OperationId = 'x' } -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -Credential $credential) -Client $script:testClient
             $auth.Header['Authorization'] | Should -Be ('Basic ' + [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('u:t')))
         }
     }
@@ -59,7 +59,7 @@ Describe 'Get-OpenApiAuthorization' {
         InModuleScope -ModuleName tcs.openapi {
             Mock -CommandName Get-OpenApiOAuthToken -MockWith { ConvertTo-SecureString -String "fetched-$Force" -AsPlainText -Force }
             $secret = ConvertTo-SecureString -String 's' -AsPlainText -Force
-            $context = Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -ClientId 'id' -ClientSecret $secret -TokenUri 'https://t/token'
+            $context = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ClientId 'id' -ClientSecret $secret -TokenUri 'https://t/token'
             $operation = @{ Security = @(@{ o = @('read') }); SecuritySchemes = @{ o = @{ Type = 'oauth2' } } }
             $auth = Get-OpenApiAuthorization -Operation $operation -Context $context -Client $script:testClient -ForceRefresh
             $auth.Header['Authorization'] | Should -Be 'Bearer fetched-True'
@@ -71,7 +71,7 @@ Describe 'Get-OpenApiAuthorization' {
     It 'returns no credentials for Security = []' {
         InModuleScope -ModuleName tcs.openapi {
             $token = ConvertTo-SecureString -String 't' -AsPlainText -Force
-            $auth = Get-OpenApiAuthorization -Operation @{ Security = @() } -Context (Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken $token) -Client $script:testClient
+            $auth = Get-OpenApiAuthorization -Operation @{ Security = @() } -Context (New-OpenApiContext -Service 'S' -BaseUri 'https://a' -BearerToken $token) -Client $script:testClient
             $auth.Header.Count | Should -Be 0
             $auth.Query.Count | Should -Be 0
         }

@@ -17,9 +17,9 @@ Describe 'Test-OpenApiSchemeCredential' {
         InModuleScope -ModuleName tcs.openapi {
             $secret = ConvertTo-SecureString -String 's' -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential -ArgumentList 'u', $secret
-            $empty = Build-OpenApiContext -Service 'S' -BaseUri 'https://a'
-            $full = Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -Credential $credential -BearerToken $secret
-            $client = Build-OpenApiContext -Service 'S' -BaseUri 'https://a' -ClientId 'id' -ClientSecret $secret
+            $empty = New-OpenApiContext -Service 'S' -BaseUri 'https://a'
+            $full = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ApiKey $secret -Credential $credential -BearerToken $secret
+            $client = New-OpenApiContext -Service 'S' -BaseUri 'https://a' -ClientId 'id' -ClientSecret $secret
             $schemes = @(
                 @{ Type = 'apiKey'; In = 'header' }
                 @{ Type = 'http'; Scheme = 'basic' }

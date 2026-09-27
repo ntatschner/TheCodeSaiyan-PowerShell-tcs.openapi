@@ -26,7 +26,7 @@ function Get-OpenApiHttpClient {
         $cache.Remove($Context.Service)
     }
 
-    $handler = Build-OpenApiHttpClientHandler -Context $Context
+    $handler = New-OpenApiHttpClientHandler -Context $Context
     $client = New-Object System.Net.Http.HttpClient -ArgumentList $handler, $true
     if ($Context.TimeoutSec -gt 0) {
         $client.Timeout = [timespan]::FromSeconds($Context.TimeoutSec)

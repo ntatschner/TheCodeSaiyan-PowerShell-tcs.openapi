@@ -1,8 +1,9 @@
-function Build-OpenApiRequestUri {
+function New-OpenApiRequestUri {
     <#
     .SYNOPSIS
         Builds the request URL from the base URI, the path template, and the path and query parameter values.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([string])]
     param(

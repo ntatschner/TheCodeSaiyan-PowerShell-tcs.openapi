@@ -1,8 +1,9 @@
-function Build-OpenApiRetryException {
+function New-OpenApiRetryException {
     <#
     .SYNOPSIS
         Wraps a retryable HTTP response in an exception that tcs.core Invoke-WithRetry understands (StatusCode and Retry-After through a Response property).
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object only; it changes no state.')]
     [CmdletBinding()]
     [OutputType([System.Exception])]
     param(

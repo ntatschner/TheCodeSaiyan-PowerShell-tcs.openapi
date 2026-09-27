@@ -208,7 +208,7 @@ function Invoke-OpenApiRequest {
     }
     if ($null -eq $context) {
         $exception = New-Object System.InvalidOperationException -ArgumentList "There is no connection for the '$Service' service. Run Set-OpenApiContext -Service '$Service' -BaseUri <url> first.$loadProblem"
-        & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $path -Exception $exception -Kind 'NoContext' -Category ([System.Management.Automation.ErrorCategory]::ConnectionError))
+        & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $path -Exception $exception -Kind 'NoContext' -Category ([System.Management.Automation.ErrorCategory]::ConnectionError))
         return
     }
 
@@ -220,10 +220,10 @@ function Invoke-OpenApiRequest {
     $parameterSpecs = Get-OpenApiMember -InputObject $Operation -Name 'Parameters'
     $parameterSpecs = @($parameterSpecs | Where-Object -FilterScript { $null -ne $_ })
     try {
-        $uri = Build-OpenApiRequestUri -BaseUri $context.BaseUri -Path $path -Parameter $parameterSpecs -PathParameters $PathParameters -QueryParameters $QueryParameters
+        $uri = New-OpenApiRequestUri -BaseUri $context.BaseUri -Path $path -Parameter $parameterSpecs -PathParameters $PathParameters -QueryParameters $QueryParameters
     }
     catch {
-        & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $path -Exception $_.Exception -Kind 'InvalidArgument' -Category ([System.Management.Automation.ErrorCategory]::InvalidArgument))
+        & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $path -Exception $_.Exception -Kind 'InvalidArgument' -Category ([System.Management.Automation.ErrorCategory]::InvalidArgument))
         return
     }
 
@@ -275,7 +275,7 @@ function Invoke-OpenApiRequest {
             $Body = $buffer
         }
         # A new HttpContent is built for every attempt (a sent request cannot be sent again)
-        $contentFactory = { Build-OpenApiHttpContent -Body $Body -ContentType $bodyContentType }
+        $contentFactory = { New-OpenApiHttpContent -Body $Body -ContentType $bodyContentType }
     }
 
     $paging = Get-OpenApiMember -InputObject $Operation -Name 'Paging'
@@ -301,7 +301,7 @@ function Invoke-OpenApiRequest {
         $client = Get-OpenApiHttpClient -Context $context
     }
     catch {
-        & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $uri -Exception $_.Exception -Kind 'Connection' -Category ([System.Management.Automation.ErrorCategory]::ConnectionError))
+        & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $method -Uri $uri -Exception $_.Exception -Kind 'Connection' -Category ([System.Management.Automation.ErrorCategory]::ConnectionError))
         return
     }
 
@@ -343,12 +343,12 @@ function Invoke-OpenApiRequest {
             elseif ($failure -is [System.TimeoutException]) {
                 $category = [System.Management.Automation.ErrorCategory]::OperationTimeout
             }
-            & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Exception $failure -Kind $kind -Category $category)
+            & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Exception $failure -Kind $kind -Category $category)
             return
         }
 
         if ($response.StatusCode -lt 200 -or $response.StatusCode -gt 299) {
-            & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Response $response -SensitiveName $sensitive)
+            & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Response $response -SensitiveName $sensitive)
             return
         }
 
@@ -358,7 +358,7 @@ function Invoke-OpenApiRequest {
                 Save-OpenApiResponseFile -Response $response -Path $OutFile
             }
             catch {
-                & $writeError (Build-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Exception $_.Exception -Kind 'OutFile' -Category ([System.Management.Automation.ErrorCategory]::WriteError))
+                & $writeError (New-OpenApiErrorRecord -Service $Service -OperationId $operationId -Method $pageMethod -Uri $uri -Exception $_.Exception -Kind 'OutFile' -Category ([System.Management.Automation.ErrorCategory]::WriteError))
             }
             return
         }

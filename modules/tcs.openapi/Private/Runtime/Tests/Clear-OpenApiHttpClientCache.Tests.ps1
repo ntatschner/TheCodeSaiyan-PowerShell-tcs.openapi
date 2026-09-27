@@ -15,8 +15,8 @@ AfterAll {
 Describe 'Clear-OpenApiHttpClientCache' {
     It 'disposes the client of one service or of all' {
         InModuleScope -ModuleName tcs.openapi {
-            $a = Get-OpenApiHttpClient -Context (Build-OpenApiContext -Service 'A' -BaseUri 'https://a')
-            $null = Get-OpenApiHttpClient -Context (Build-OpenApiContext -Service 'B' -BaseUri 'https://b')
+            $a = Get-OpenApiHttpClient -Context (New-OpenApiContext -Service 'A' -BaseUri 'https://a')
+            $null = Get-OpenApiHttpClient -Context (New-OpenApiContext -Service 'B' -BaseUri 'https://b')
             Clear-OpenApiHttpClientCache -Service 'A'
             $cache = Get-OpenApiModuleState -Name 'TcsOpenApiHttpClients'
             $cache.ContainsKey('A') | Should -BeFalse
@@ -29,7 +29,7 @@ Describe 'Clear-OpenApiHttpClientCache' {
 
     It 'is called when the module is removed' {
         $ModuleRoot = Split-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -Parent
-        $client = InModuleScope -ModuleName tcs.openapi { Get-OpenApiHttpClient -Context (Build-OpenApiContext -Service 'C' -BaseUri 'https://c') }
+        $client = InModuleScope -ModuleName tcs.openapi { Get-OpenApiHttpClient -Context (New-OpenApiContext -Service 'C' -BaseUri 'https://c') }
         Remove-Module -Name tcs.openapi -Force
         $failure = $null
         try {

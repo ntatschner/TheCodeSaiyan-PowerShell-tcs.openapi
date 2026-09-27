@@ -15,16 +15,16 @@ AfterAll {
 Describe 'Get-OpenApiBodyLogText' {
     It 'shows text bodies with secrets redacted' {
         InModuleScope -ModuleName tcs.openapi {
-            $content = Build-OpenApiHttpContent -Body ([ordered]@{ user = 'u'; password = 'p' }) -ContentType 'application/json'
+            $content = New-OpenApiHttpContent -Body ([ordered]@{ user = 'u'; password = 'p' }) -ContentType 'application/json'
             Get-OpenApiBodyLogText -Content $content | Should -BeExactly '{"user":"u","password":"********"}'
         }
     }
 
     It 'summarises binary and multipart bodies' {
         InModuleScope -ModuleName tcs.openapi {
-            $binary = Build-OpenApiHttpContent -Body ([byte[]](1, 2, 3)) -ContentType 'application/octet-stream'
+            $binary = New-OpenApiHttpContent -Body ([byte[]](1, 2, 3)) -ContentType 'application/octet-stream'
             Get-OpenApiBodyLogText -Content $binary | Should -Be '[application/octet-stream content, 3 bytes]'
-            $multipart = Build-OpenApiHttpContent -Body @{ password = 'p' } -ContentType 'multipart/form-data'
+            $multipart = New-OpenApiHttpContent -Body @{ password = 'p' } -ContentType 'multipart/form-data'
             Get-OpenApiBodyLogText -Content $multipart | Should -Match '^\[multipart/form-data content'
         }
     }

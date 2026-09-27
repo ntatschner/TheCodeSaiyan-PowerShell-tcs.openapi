@@ -24,7 +24,7 @@ Describe 'Get-OpenApiOAuthToken' {
         }
         InModuleScope -ModuleName tcs.openapi -Parameters @{ BaseUri = $script:server.BaseUri } {
             $script:testClient = New-Object System.Net.Http.HttpClient
-            $script:testContext = Build-OpenApiContext -Service 'Tok' -BaseUri $BaseUri -ClientId 'id' -ClientSecret (ConvertTo-SecureString -String 'sec' -AsPlainText -Force)
+            $script:testContext = New-OpenApiContext -Service 'Tok' -BaseUri $BaseUri -ClientId 'id' -ClientSecret (ConvertTo-SecureString -String 'sec' -AsPlainText -Force)
         }
     }
 
