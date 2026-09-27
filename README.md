@@ -177,6 +177,8 @@ Vendor extensions read by the generator: `x-ps-name`, `x-ps-verb`, `x-ps-noun` (
 | Other | Deprecated operations (OA060), missing operationIds (generated, OA010) | Callbacks, links and webhooks are ignored; operations with a duplicate operationId are skipped (OA011, OA070): call them with `Invoke-OpenApiRequest` |
 
 `Test-OpenApiDocument` lists every finding; the codes are listed in [DESIGN.md](DESIGN.md#findings-codes-non-exhaustive).
+A document without findings returns nothing and prints `No problems found in <file> (<n> operations).`;
+`-Summary` returns one object with the operation count and the number of errors, warnings and information findings.
 
 ## PowerShell 5.1 and 7
 

@@ -27,6 +27,8 @@ QUICK START
 
         Test-OpenApiDocument -Path ./petstore.json |
             Where-Object Severity -NE 'Information'
+        # No findings: nothing is returned and 'No problems found in
+        # petstore.json (<n> operations).' is shown. -Summary returns counts.
 
         New-OpenApiModule -Path ./petstore.json -ModuleName PetStore `
             -NounPrefix PetStore -OutputPath ./out

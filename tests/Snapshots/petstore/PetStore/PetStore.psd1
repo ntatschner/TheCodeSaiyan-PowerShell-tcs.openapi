@@ -8,7 +8,7 @@
     CompatiblePSEditions = @('Desktop', 'Core')
     PowerShellVersion    = '5.1'
     RequiredModules      = @(
-        @{ ModuleName = 'tcs.openapi'; ModuleVersion = '0.1.0' }
+        @{ ModuleName = 'tcs.openapi'; ModuleVersion = '0.1.1' }
     )
     FunctionsToExport    = @(
         'Get-PetStoreContext',

@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-27
+
+### Added
+
+- `Test-OpenApiDocument -Summary` returns one `Tcs.OpenApi.TestSummary` object (Source, SourceVersion, Operations,
+  Errors, Warnings, Information, IsValid, Findings), also when the document has no findings.
+
+### Changed
+
+- `Test-OpenApiDocument` writes `No problems found in <source> (<n> operations).` to the information stream (shown by
+  default) when a document has no findings, so an empty result is not mistaken for the command doing nothing.
+  `-InformationAction Ignore` drops it.
+
 ## [0.1.0] - 2026-09-27
 
 First release. Replaces the Swagger generator of tcs.utils.

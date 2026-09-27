@@ -10,7 +10,7 @@ Describe 'Test-OpenApiDocument' {
             $help.Synopsis | Should -Not -BeNullOrEmpty
             $help.Description | Should -Not -BeNullOrEmpty
             @($help.Examples.Example).Count | Should -BeGreaterThan 0
-            foreach ($name in 'Path', 'Uri', 'InputObject', 'Document') {
+            foreach ($name in 'Path', 'Uri', 'InputObject', 'Document', 'Summary') {
                 ($help.Parameters.Parameter | Where-Object Name -EQ $name).Description | Should -Not -BeNullOrEmpty
             }
         }
@@ -55,6 +55,65 @@ Describe 'Test-OpenApiDocument' {
 
         It 'returns OA001 for JSON that is not a document object' {
             (Test-OpenApiDocument -InputObject '[1,2,3]').Code | Should -Be 'OA001'
+        }
+
+        It 'writes nothing to the pipeline and says so in the information stream for a clean document' {
+            $clean = '{"openapi":"3.0.3","info":{"title":"Clean","version":"1"},"paths":{"/a":{"get":{"operationId":"getA","responses":{"200":{"description":"ok"}}}},"/b":{"get":{"operationId":"getB","responses":{"200":{"description":"ok"}}}}}}'
+            $output = @(Test-OpenApiDocument -InputObject $clean -InformationVariable info)
+            $output.Count | Should -Be 0
+            @($info).Count | Should -Be 1
+            [string]$info[0].MessageData | Should -BeExactly 'No problems found in the document (2 operations).'
+        }
+
+        It 'names the file in the message and shows it by default' {
+            $file = Join-Path -Path $TestDrive -ChildPath 'api.json'
+            Set-Content -LiteralPath $file -Value '{"openapi":"3.0.3","info":{"title":"One","version":"1"},"paths":{"/a":{"get":{"operationId":"getA","responses":{"200":{"description":"ok"}}}}}}'
+            $shown = @(Test-OpenApiDocument -Path $file 6>&1)
+            $shown.Count | Should -Be 1
+            [string]$shown[0].MessageData | Should -BeExactly 'No problems found in api.json (1 operation).'
+        }
+
+        It 'drops the message with -InformationAction Ignore' {
+            $clean = '{"openapi":"3.0.3","info":{"title":"Clean","version":"1"},"paths":{"/a":{"get":{"operationId":"getA","responses":{"200":{"description":"ok"}}}}}}'
+            @(Test-OpenApiDocument -InputObject $clean -InformationAction Ignore 6>&1).Count | Should -Be 0
+        }
+
+        It 'returns one summary object with -Summary, also for a clean document' {
+            $clean = '{"openapi":"3.0.3","info":{"title":"Clean","version":"1"},"paths":{"/a":{"get":{"operationId":"getA","responses":{"200":{"description":"ok"}}}}}}'
+            $summary = @(Test-OpenApiDocument -InputObject $clean -Summary -InformationVariable info)
+            $summary.Count | Should -Be 1
+            $summary[0].PSObject.TypeNames | Should -Contain 'Tcs.OpenApi.TestSummary'
+            $summary[0].Operations | Should -Be 1
+            $summary[0].Errors | Should -Be 0
+            $summary[0].IsValid | Should -BeTrue
+            $summary[0].SourceVersion | Should -Be '3.0.3'
+            @($summary[0].Findings).Count | Should -Be 0
+            @($info).Count | Should -Be 0
+        }
+
+        It 'counts findings by severity with -Summary' {
+            $path = Join-Path -Path $script:fixtures -ChildPath 'document-petstore-3.0.json'
+            $findings = @(Test-OpenApiDocument -Path $path)
+            $summary = Test-OpenApiDocument -Path $path -Summary
+            $summary.Source | Should -Be 'document-petstore-3.0.json'
+            $summary.Errors | Should -Be @($findings | Where-Object Severity -EQ 'Error').Count
+            $summary.Warnings | Should -Be @($findings | Where-Object Severity -EQ 'Warning').Count
+            $summary.Information | Should -Be @($findings | Where-Object Severity -EQ 'Information').Count
+            @($summary.Findings).Count | Should -Be $findings.Count
+            $summary.Operations | Should -BeGreaterThan 0
+        }
+
+        It 'summarises an imported document model' {
+            $model = Import-OpenApiDocument -Path (Join-Path -Path $script:fixtures -ChildPath 'document-petstore-3.0.json')
+            $summary = Test-OpenApiDocument -Document $model -Summary
+            $summary.Operations | Should -Be @($model.Operations).Count
+            @($summary.Findings).Count | Should -Be @($model.Findings).Count
+        }
+
+        It 'marks a summary with an error as not valid' {
+            $summary = Test-OpenApiDocument -InputObject '{"swagger":"1.2"}' -Summary
+            $summary.Errors | Should -Be 1
+            $summary.IsValid | Should -BeFalse
         }
 
         It 'returns OA002 for missing paths' {
