@@ -30,6 +30,7 @@ Describe 'Get-OpenApiGenCommandName' {
         @{ OperationId = 'uploadFile'; Method = 'POST'; Path = '/files'; Expected = 'New-UploadFile' }
         @{ OperationId = 'PetsFindByStatus'; Method = 'GET'; Path = '/pets'; Expected = 'Get-PetsFindByStatus' }
         @{ OperationId = 'list'; Method = 'GET'; Path = '/users/{id}/policies'; Expected = 'Get-Policy' }
+        @{ OperationId = 'listOrders_2'; Method = 'GET'; Path = '/orders'; Expected = 'Get-Order2' }
     ) {
         param($OperationId, $Method, $Path, $Expected)
         $name = Get-TestName -Operation (New-TestOperation -OperationId $OperationId -Method $Method -Path $Path)

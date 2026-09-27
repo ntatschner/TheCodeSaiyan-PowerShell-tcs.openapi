@@ -11,7 +11,8 @@ function Get-OpenApiGenCommandName {
            default verb and stays in the noun.
         3. Without an operationId (or when the document model generated it, finding OA010): the method's
            default verb and the last non-parameter path segment.
-        4. Noun = NounPrefix + PascalCase words with the last word singularised; only A-Z, a-z, 0-9.
+        4. Noun = NounPrefix + PascalCase words with the last word singularised (the last word with
+           letters, so a trailing number is skipped); only A-Z, a-z, 0-9.
         Invalid overrides are ignored with an OA040 warning finding.
         Returns { OperationId, Method, Path, Verb, Noun, BaseNoun, Name, Source, IsList, Findings }.
     #>
@@ -74,8 +75,14 @@ function Get-OpenApiGenCommandName {
             $nounWords = $pathWords
         }
     }
+    # Singularise the last word that has letters ('listOrders_2' -> 'Order2')
     $nounWords = @($nounWords)
-    $nounWords[$nounWords.Count - 1] = ConvertTo-OpenApiGenSingular -Word $nounWords[$nounWords.Count - 1]
+    for ($i = $nounWords.Count - 1; $i -ge 0; $i--) {
+        if ($nounWords[$i] -match '\p{L}') {
+            $nounWords[$i] = ConvertTo-OpenApiGenSingular -Word $nounWords[$i]
+            break
+        }
+    }
     $baseNoun = ConvertTo-OpenApiGenPascalCase -Word $nounWords
     if ($baseNoun -eq '') {
         $baseNoun = 'Resource'
