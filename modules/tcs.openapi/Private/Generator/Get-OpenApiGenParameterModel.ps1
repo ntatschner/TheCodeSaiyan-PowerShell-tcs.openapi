@@ -172,7 +172,10 @@ function Get-OpenApiGenParameterModel {
         }
         $bodyType = 'object'
         $bodyExample = "'example'"
-        if ($kind -eq 'form' -or $kind -eq 'multipart' -or $bodyMode -eq 'Flattened' -or ($null -ne $bodySchema -and ($bodySchema.Type -eq 'object' -or @(Get-OpenApiGenMapEntry -Map $bodySchema.Properties).Count -gt 0))) {
+        $objectSchemas = @(@($bodySchema) + @($bodySchema.OneOf) + @($bodySchema.AnyOf) | Where-Object -FilterScript {
+                $null -ne $_ -and ($_.Type -eq 'object' -or @(Get-OpenApiGenMapEntry -Map $_.Properties).Count -gt 0)
+            })
+        if ($kind -eq 'form' -or $kind -eq 'multipart' -or $bodyMode -eq 'Flattened' -or $objectSchemas.Count -gt 0) {
             $bodyExample = '@{}'
         }
         if ($kind -eq 'form' -or $kind -eq 'multipart') {
