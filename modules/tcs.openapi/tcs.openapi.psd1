@@ -11,6 +11,7 @@
     RequiredModules      = @(
         @{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.0' }
     )
+    RequiredAssemblies   = @('System.Net.Http')
     FunctionsToExport    = @(
         'Get-OpenApiContext',
         'Import-OpenApiDocument',
