@@ -7,8 +7,11 @@
     Dot-source this file in a test. New-TestSchema, New-TestParameter, New-TestRequestBody,
     New-TestResponse, New-TestOperation and New-TestDocument build single objects with every
     documented property present. New-TestOpenApiModel -Name petstore|reserved|bodies returns the
-    three models used by the snapshot and generated-module tests.
+    three models used by the snapshot and generated-module tests, and Get-TestSnapshotCase the options
+    they are generated with.
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test helpers that only build in-memory objects.')]
+param()
 
 function New-TestSchema {
     [CmdletBinding()]
@@ -193,6 +196,20 @@ function New-TestFinding {
     [pscustomobject]@{ PSTypeName = 'Tcs.OpenApi.Finding'; Severity = $Severity; Code = $Code; Pointer = $Pointer; Message = $Message; Operation = $Operation }
 }
 
+function Get-TestSnapshotCase {
+    <#
+    .SYNOPSIS
+        The generator options of the three snapshot modules (tests/Snapshots/<Name>/<ModuleName>).
+    #>
+    [CmdletBinding()]
+    param()
+    @(
+        [pscustomobject]@{ Name = 'petstore'; ModuleName = 'PetStore'; NounPrefix = 'PetStore' }
+        [pscustomobject]@{ Name = 'reserved'; ModuleName = 'Reserved.Names'; NounPrefix = '' }
+        [pscustomobject]@{ Name = 'bodies'; ModuleName = 'Shop'; NounPrefix = 'Shop' }
+    )
+}
+
 function New-TestOpenApiModel {
     [CmdletBinding()]
     param([Parameter(Mandatory)][ValidateSet('petstore', 'reserved', 'bodies')][string]$Name)
@@ -211,21 +228,21 @@ function New-TestOpenApiModel {
                 (New-TestOperation -OperationId 'listPets' -Method GET -Path '/pets' -Tags 'pets' -Summary 'List all pets' -Description "Returns the pets in the store.`nResults are paged." -Parameters @(
                         (New-TestParameter -Name 'limit' -In query -Description 'How many items to return at one time (max 100).' -Schema (New-TestSchema -Type integer -Format int32 -Minimum 1 -Maximum 100)),
                         (New-TestParameter -Name 'tags' -In query -Description 'Tags to filter by.' -Explode $true -Schema (New-TestSchema -Type array -Items (New-TestSchema -Type string)))
-                    ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $petList)))) -Paging ([ordered]@{ Kind = 'nextLink'; ItemsProperty = 'value'; NextLinkProperty = 'nextLink' })),
+                ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $petList)))) -Paging ([ordered]@{ Kind = 'nextLink'; ItemsProperty = 'value'; NextLinkProperty = 'nextLink' })),
                 (New-TestOperation -OperationId 'createPets' -Method POST -Path '/pets' -Tags 'pets' -Summary 'Create a pet' -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType $json -Schema $pet))) -Responses @((New-TestResponse -StatusCode '201' -Description 'Created' -Content @((New-TestMediaType -ContentType $json -Schema $pet))))),
                 (New-TestOperation -OperationId 'showPetById' -Method GET -Path '/pets/{petId}' -Tags 'pets' -Summary 'Info for a specific pet' -ExternalDocsUrl 'https://docs.example.com/pets' -Parameters @(
                         (New-TestParameter -Name 'petId' -In path -Description 'The id of the pet to retrieve.')
-                    ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $pet))))),
+                ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $pet))))),
                 (New-TestOperation -OperationId 'updatePet' -Method PUT -Path '/pets/{petId}' -Tags 'pets' -Summary 'Replace a pet' -Parameters @(
                         (New-TestParameter -Name 'petId' -In path)
-                    ) -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType $json -Schema $pet))) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $pet))))),
+                ) -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType $json -Schema $pet))) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema $pet))))),
                 (New-TestOperation -OperationId 'deletePet' -Method DELETE -Path '/pets/{petId}' -Tags 'pets' -Summary 'Delete a pet' -Deprecated -Parameters @(
                         (New-TestParameter -Name 'petId' -In path),
                         (New-TestParameter -Name 'api_key' -In header)
-                    ) -Responses @((New-TestResponse -StatusCode '204' -Description 'Deleted'))),
+                ) -Responses @((New-TestResponse -StatusCode '204' -Description 'Deleted'))),
                 (New-TestOperation -OperationId 'getPetPhoto' -Method GET -Path '/pets/{petId}/photo' -Tags 'pets' -Summary 'Download the photo of a pet' -Parameters @(
                         (New-TestParameter -Name 'petId' -In path)
-                    ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'image/png' -Schema (New-TestSchema -Type string -Format binary)))))),
+                ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'image/png' -Schema (New-TestSchema -Type string -Format binary)))))),
                 (New-TestOperation -OperationId 'petStats' -Method GET -Path '/pets/stats' -Tags 'pets' -Summary 'Pet statistics' -Extensions ([ordered]@{ 'x-ps-name' = 'Measure-PetStatistic' }) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema (New-TestSchema -Type object)))))),
                 (New-TestOperation -OperationId 'getInventory' -Method GET -Path '/store/inventory' -Tags 'store' -Summary 'Returns pet inventories by status' -Security @([ordered]@{ api_key = @() }) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema (New-TestSchema -Type object -AdditionalProperties (New-TestSchema -Type integer))))))),
                 (New-TestOperation -OperationId 'getHealth' -Method GET -Path '/health' -Security @() -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'text/plain' -Schema (New-TestSchema -Type string))))))
@@ -250,7 +267,7 @@ function New-TestOpenApiModel {
                     password = New-TestSchema -Type string -Format password
                 })
             $operations = @(
-                (New-TestOperation -OperationId 'getItem' -Method GET -Path '/items/{itemId}' -Tags 'items' -Summary 'Get an item' -Parameters @(
+                (New-TestOperation -OperationId 'getStockItem' -Method GET -Path '/items/{itemId}' -Tags 'items' -Summary 'Get an item from stock' -Parameters @(
                         (New-TestParameter -Name 'itemId' -In path),
                         (New-TestParameter -Name 'debug' -In query -Schema (New-TestSchema -Type boolean) -Description 'Adds debug output.'),
                         (New-TestParameter -Name 'Raw' -In query),
@@ -262,10 +279,10 @@ function New-TestOpenApiModel {
                         (New-TestParameter -Name 'Host' -In header),
                         (New-TestParameter -Name 'X-Strict' -In header -Required -Schema (New-TestSchema -Type boolean)),
                         (New-TestParameter -Name 'session_id' -In cookie)
-                    )),
-                (New-TestOperation -OperationId 'updateItem' -Method PATCH -Path '/items/{itemId}' -Tags 'items' -Parameters @(
+                )),
+                (New-TestOperation -OperationId 'updateStockItem' -Method PATCH -Path '/items/{itemId}' -Tags 'items' -Parameters @(
                         (New-TestParameter -Name 'itemId' -In path)
-                    ) -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType $json -Schema $itemBody)))),
+                ) -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType $json -Schema $itemBody)))),
                 (New-TestOperation -OperationId 'getPetOwner' -Method GET -Path '/pets/{petId}/owner' -Tags 'owners' -Parameters @((New-TestParameter -Name 'petId' -In path))),
                 (New-TestOperation -OperationId 'get_pet_owner' -Method GET -Path '/pets/owner/{name}' -Tags 'owners' -Parameters @((New-TestParameter -Name 'name' -In path))),
                 (New-TestOperation -OperationId 'setThing' -Method PUT -Path '/things' -Tags 'things'),
@@ -282,14 +299,14 @@ function New-TestOpenApiModel {
         'bodies' {
             $address = New-TestSchema -Type object -Properties ([ordered]@{ city = New-TestSchema -Type string })
             $order = New-TestSchema -Type object -RefName 'Order' -Properties ([ordered]@{
-                    id        = New-TestSchema -Type string -ReadOnly
-                    quantity  = New-TestSchema -Type integer -Format int32 -Enum @(1, 5, 10)
-                    total     = New-TestSchema -Type number -Minimum 0 -Maximum 10000.5
-                    rush      = New-TestSchema -Type boolean
-                    shipDate  = New-TestSchema -Type string -Format date-time
-                    note      = New-TestSchema -Type string -Nullable -Pattern '^[a-z ]*$'
-                    labels    = New-TestSchema -Type array -Items (New-TestSchema -Type string) -MaxItems 5
-                    address   = $address
+                    id           = New-TestSchema -Type string -ReadOnly
+                    quantity     = New-TestSchema -Type integer -Format int32 -Enum @(1, 5, 10)
+                    total        = New-TestSchema -Type number -Minimum 0 -Maximum 10000.5
+                    rush         = New-TestSchema -Type boolean
+                    shipDate     = New-TestSchema -Type string -Format date-time
+                    note         = New-TestSchema -Type string -Nullable -Pattern '^[a-z ]*$'
+                    labels       = New-TestSchema -Type array -Items (New-TestSchema -Type string) -MaxItems 5
+                    address      = $address
                     'line-items' = New-TestSchema -Type array -Items $address
                 })
             $operations = @(
@@ -305,7 +322,7 @@ function New-TestOpenApiModel {
                         (New-TestParameter -Name 'status' -In query -Schema (New-TestSchema -Type array -Items (New-TestSchema -Type string -Enum @('open', 'closed')))),
                         (New-TestParameter -Name 'include_deleted' -In query -Schema (New-TestSchema -Type boolean)),
                         (New-TestParameter -Name 'min_total' -In query -Schema (New-TestSchema -Type number))
-                    ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema (New-TestSchema -Type array -Items $order))))) -Paging ([ordered]@{ Kind = 'linkHeader'; ItemsProperty = $null; NextLinkProperty = $null })),
+                ) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType $json -Schema (New-TestSchema -Type array -Items $order))))) -Paging ([ordered]@{ Kind = 'linkHeader'; ItemsProperty = $null; NextLinkProperty = $null })),
                 (New-TestOperation -OperationId 'getReport' -Method GET -Path '/reports/{reportId}' -Tags 'reports' -Parameters @((New-TestParameter -Name 'reportId' -In path -Schema (New-TestSchema -Type integer -Format int64))) -Responses @((New-TestResponse -Content @((New-TestMediaType -ContentType 'application/pdf' -Schema (New-TestSchema -Type string -Format binary)))))),
                 (New-TestOperation -OperationId 'createNote' -Method POST -Path '/notes' -Tags 'notes' -Summary "Créer une note (non-ASCII summary)" -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType 'text/plain' -Schema (New-TestSchema -Type string))))),
                 (New-TestOperation -OperationId 'getPublicStatus' -Method GET -Path '/public/status' -Security @())

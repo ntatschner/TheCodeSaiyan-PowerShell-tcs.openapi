@@ -1,0 +1,19 @@
+<#
+    Overrides for Shop.
+
+    New-OpenApiModule creates this file once and never overwrites it, even with -Force.
+    It is loaded after the generated commands, so a function defined here with the name of a
+    generated command replaces that command, for example:
+
+        function Get-ShopExample {
+            [CmdletBinding()]
+            param()
+            ...
+        }
+
+    Only the commands listed in FunctionsToExport in Shop.psd1 are exported. Helper
+    functions defined here stay private to the module. Inside a function you can call the engine
+    directly with the operation metadata of this module:
+
+        Invoke-OpenApiRequest -Service $script:TcsOpenApiService -Operation $script:TcsOpenApiOperations['<operationId>'] -Cmdlet $PSCmdlet
+#>
