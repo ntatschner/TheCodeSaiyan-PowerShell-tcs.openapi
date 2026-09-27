@@ -165,7 +165,9 @@ function New-OpenApiModule {
 
     process {
         $parameterSetName = $PSCmdlet.ParameterSetName
-        Invoke-TcsCommand -ScriptBlock {
+        $telemetry = Start-TcsTelemetry
+        $failure = $null
+        try {
             if ($parameterSetName -ne 'Document') {
                 $importCommand = Get-Command -Name 'Import-OpenApiDocument' -CommandType Function, Cmdlet -ErrorAction SilentlyContinue
                 if ($null -eq $importCommand) {
@@ -211,6 +213,13 @@ function New-OpenApiModule {
                 Skipped      = @($plan.Skipped)
                 Files        = $written
             }
+        }
+        catch {
+            $failure = $_
+            throw
+        }
+        finally {
+            Complete-TcsTelemetry -Token $telemetry -ErrorRecord $failure
         }
     }
 }

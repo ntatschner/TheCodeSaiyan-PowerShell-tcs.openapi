@@ -5,7 +5,7 @@ tcs.openapi turns an OpenAPI 3.0/3.1 or Swagger 2.0 document into a PowerShell m
 - **Generator** (design time): reads a document, normalises it, reports problems and writes a module of thin wrapper functions.
 - **Runtime** (call time): one request engine that every generated module uses (auth, serialisation, bodies, retry, paging, errors, downloads). Generated modules declare `RequiredModules = @('tcs.openapi')`, so fixes to the engine reach every generated module without regenerating.
 
-Targets: Windows PowerShell 5.1 and PowerShell 7 (Windows, Linux, macOS) for both halves. Depends on tcs.core 0.4.0 (`Invoke-WithRetry`, `Get-HttpErrorDetail`, `Set/Get/Remove-ModuleSecret`, `Start-TcsTelemetry`/`Invoke-TcsCommand`/`Complete-TcsTelemetry`, `ConvertTo-PascalCase`).
+Targets: Windows PowerShell 5.1 and PowerShell 7 (Windows, Linux, macOS) for both halves. Depends on tcs.core 0.4.1 (`Invoke-WithRetry`, `Get-HttpErrorDetail`, `Set/Get/Remove-ModuleSecret`, `Start-TcsTelemetry`/`Complete-TcsTelemetry`, `ConvertTo-PascalCase`).
 
 Rules for all code: no PS7-only syntax (`??`, `?:`, `&&`, `||`, ternary, `-Parallel`, 3-arg `Join-Path`); no .NET Core-only APIs without a 5.1 fallback; no PowerShell classes (they reload badly on 5.1) - use `[pscustomobject]` with a `PSTypeName`; no `$script:` state shared between generator stages (pass objects); non-ASCII files are UTF-8 with BOM.
 

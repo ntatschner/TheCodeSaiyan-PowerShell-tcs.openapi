@@ -49,13 +49,16 @@ function Remove-OpenApiContext {
         [switch]$Persisted
     )
 
-    Invoke-TcsCommand -ScriptBlock {
+    $telemetry = Start-TcsTelemetry
+    $failure = $null
+    $writtenErrors = New-Object -TypeName System.Collections.ArrayList
+    try {
         $store = Get-OpenApiContextStore
         $inSession = $store.ContainsKey($Service)
         $saved = Test-Path -LiteralPath (Get-OpenApiContextSettingPath -Service $Service)
         if (-not $inSession -and -not ($Persisted -and $saved)) {
             if (-not $saved) {
-                Write-Error -Message "There is no context for the '$Service' service." -Category ObjectNotFound -TargetObject $Service -ErrorId 'OpenApi.ContextNotFound'
+                Write-Error -Message "There is no context for the '$Service' service." -Category ObjectNotFound -TargetObject $Service -ErrorId 'OpenApi.ContextNotFound' -ErrorVariable +writtenErrors
             }
             elseif (-not $Persisted) {
                 Write-Verbose -Message "The '$Service' context is saved but not loaded; use -Persisted to delete the saved context."
@@ -74,5 +77,16 @@ function Remove-OpenApiContext {
                 $null = Remove-OpenApiPersistedContext -Service $Service -Confirm:$false
             }
         }
+    }
+    catch {
+        $failure = $_
+        throw
+    }
+    finally {
+        # A written "not found" error also makes the run a failed one
+        if ($null -eq $failure -and $writtenErrors.Count -gt 0) {
+            $failure = $writtenErrors[0]
+        }
+        Complete-TcsTelemetry -Token $telemetry -ErrorRecord $failure
     }
 }

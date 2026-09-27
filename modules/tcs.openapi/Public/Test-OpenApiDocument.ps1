@@ -111,11 +111,13 @@ function Test-OpenApiDocument {
 
     begin {
         $telemetry = Start-TcsTelemetry
+        $lastError = $null
     }
 
     process {
         $parameterSet = $PSCmdlet.ParameterSetName
-        $results = Invoke-TcsCommand -Token $telemetry -ScriptBlock {
+        $completed = $false
+        try {
             $findings = @()
             $operationCount = 0
             $sourceVersion = $null
@@ -156,16 +158,13 @@ function Test-OpenApiDocument {
                 }
             }
 
-            # One result object (not enumerated); the output is written below, in this function's scope, so
-            # -InformationAction and -InformationVariable apply to the message
-            , [pscustomobject]@{
+            $result = [pscustomobject]@{
                 Findings       = $findings
                 OperationCount = $operationCount
                 SourceVersion  = $sourceVersion
                 SourceName     = $sourceName
             }
-        }
-        foreach ($result in @($results)) {
+
             $findings = @($result.Findings)
             if ($Summary) {
                 $errorCount = @($findings | Where-Object -FilterScript { $_.Severity -eq 'Error' }).Count
@@ -180,7 +179,8 @@ function Test-OpenApiDocument {
                     IsValid       = ($errorCount -eq 0)
                     Findings      = $findings
                 }
-                continue
+                $completed = $true
+                return
             }
             if ($findings.Count -eq 0) {
                 $plural = 's'
@@ -197,13 +197,25 @@ function Test-OpenApiDocument {
                     # Shown by default so an empty result is not mistaken for the command doing nothing
                     Write-Information -MessageData $message -InformationAction Continue
                 }
-                continue
+                $completed = $true
+                return
             }
             $findings
+            $completed = $true
+        }
+        catch {
+            $lastError = $_
+            throw
+        }
+        finally {
+            # end does not run when a later command stops the pipeline (Select-Object -First)
+            if (-not $completed) {
+                Complete-TcsTelemetry -Token $telemetry -ErrorRecord $lastError
+            }
         }
     }
 
     end {
-        Complete-TcsTelemetry -Token $telemetry
+        Complete-TcsTelemetry -Token $telemetry -ErrorRecord $lastError
     }
 }

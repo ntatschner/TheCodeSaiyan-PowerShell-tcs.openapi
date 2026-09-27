@@ -1,5 +1,5 @@
 @{
-    ModuleVersion        = '0.2.0'
+    ModuleVersion        = '0.2.1'
     GUID                 = 'fea600e7-039d-4cf2-b288-bbf335757db6'
     Author               = 'Nigel Tatschner'
     CompanyName          = 'TheCodeSaiyan'
@@ -9,7 +9,7 @@
     PowerShellVersion    = '5.1'
     RootModule           = 'tcs.openapi.psm1'
     RequiredModules      = @(
-        @{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.0' }
+        @{ ModuleName = 'tcs.core'; ModuleVersion = '0.4.1' }
     )
     RequiredAssemblies   = @('System.Net.Http')
     FunctionsToExport    = @(

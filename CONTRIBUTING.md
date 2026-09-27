@@ -7,7 +7,7 @@ operation metadata format described in `DESIGN.md`, so changes to either affect 
 ## Getting started
 
 Requirements: PowerShell 7.2+ for development (the code itself must also run on Windows PowerShell 5.1), tcs.core
-0.4.0, Pester 5.7.1 and PSScriptAnalyzer 1.23.0. The build script installs Pester and tcs.core when they are missing.
+0.4.1, Pester 5.7.1 and PSScriptAnalyzer 1.23.0. The build script installs Pester and tcs.core when they are missing.
 
 ```powershell
 ./Build.ps1 -Task Test             # manifest check, PSScriptAnalyzer, Pester
