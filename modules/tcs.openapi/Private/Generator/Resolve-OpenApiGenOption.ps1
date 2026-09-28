@@ -8,7 +8,8 @@ function Resolve-OpenApiGenOption {
         module name when there is no NounPrefix. ModuleVersion defaults to 0.1.0 and Author to
         'tcs.openapi', so the output never depends on the machine or user that runs the generator.
         ModulePath = OutputPath/ModuleName. UnwrapProperty is the response property to output instead of
-        the whole response (empty for none).
+        the whole response (empty for none). HelpUri is the online help address of each command, with
+        {0} for the command name (empty for none); it must be an absolute http(s) URL.
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -37,6 +38,11 @@ function Resolve-OpenApiGenOption {
         [AllowEmptyString()]
         [string]$UnwrapProperty,
 
+        [Parameter()]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$HelpUri,
+
         [Parameter(Mandatory = $true)]
         [string]$GeneratorVersion
     )
@@ -46,6 +52,15 @@ function Resolve-OpenApiGenOption {
     }
     if ($NounPrefix -ne '' -and $NounPrefix -notmatch '^[A-Za-z][A-Za-z0-9]*$') {
         throw "The noun prefix '$NounPrefix' is not valid: use letters and digits, starting with a letter."
+    }
+    $helpUriValue = ''
+    if (-not [string]::IsNullOrWhiteSpace($HelpUri)) {
+        $helpUriValue = $HelpUri.Trim()
+        $sample = $helpUriValue.Replace('{0}', 'Get-Example')
+        $parsed = $null
+        if ($sample -match '[{}\s]' -or -not [uri]::TryCreate($sample, [System.UriKind]::Absolute, [ref]$parsed) -or @('http', 'https') -notcontains $parsed.Scheme) {
+            throw "The help URI '$HelpUri' is not valid: use an absolute http or https URL, with {0} where the command name goes."
+        }
     }
     $prefix = $NounPrefix
     if ($prefix -eq '') {
@@ -72,5 +87,6 @@ function Resolve-OpenApiGenOption {
         Author           = $moduleAuthor
         GeneratorVersion = $GeneratorVersion
         UnwrapProperty   = [string]$UnwrapProperty
+        HelpUri          = $helpUriValue
     }
 }

@@ -59,6 +59,7 @@ THE GENERATED MODULE
         Public/_Connection/       Set-, Get- and Remove-<Prefix>Context
         Overrides.ps1             yours: never overwritten
         README.md                 the list of commands
+        en-US/about_<ModuleName>.help.txt   the module's about topic
 
     Regenerate with -Force to replace generated files. Overrides.ps1 is
     created once and never replaced: a function defined there replaces the
@@ -143,6 +144,16 @@ NAMING
     ConnectorPost -> New-Connector). Collisions add a path
     segment or the method (OA040); parameters that clash with common
     parameters get a location suffix (OA041).
+
+HELP AND DOCUMENTATION SITES
+    The help of the generated commands is plain text that PlatyPS can turn
+    into Markdown for MDX sites (Docusaurus, Astro Starlight) and plain
+    Markdown sites: HTML and Markdown from the document are converted, words
+    with '<', '{' or '}' and the operation ids and paths are code spans, and
+    every example has a description. New-OpenApiModule -HelpUri
+    'https://docs.example.com/api/{0}' makes each command's page its online
+    help ({0} is the command name). The manifest gets ProjectUri and
+    LicenseUri from the document.
 
 WHATIF AND CONFIRM
     A generated command has -WhatIf and -Confirm when it can change data:

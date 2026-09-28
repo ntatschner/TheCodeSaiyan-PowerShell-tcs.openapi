@@ -170,6 +170,10 @@ function New-TestDocument {
         [string]$Title = 'Test API',
         [string]$Version = '1.0.0',
         [string]$Description,
+        [string]$ContactUrl,
+        [string]$LicenseName,
+        [string]$LicenseUrl,
+        [string]$ExternalDocsUrl,
         [object[]]$Servers = @(),
         [System.Collections.IDictionary]$SecuritySchemes = [ordered]@{},
         [object]$Security,
@@ -183,6 +187,10 @@ function New-TestDocument {
         Title           = $Title
         Version         = $Version
         Description     = $(if ($Description) { $Description } else { $null })
+        ContactUrl      = $(if ($ContactUrl) { $ContactUrl } else { $null })
+        LicenseName     = $(if ($LicenseName) { $LicenseName } else { $null })
+        LicenseUrl      = $(if ($LicenseUrl) { $LicenseUrl } else { $null })
+        ExternalDocsUrl = $(if ($ExternalDocsUrl) { $ExternalDocsUrl } else { $null })
         Servers         = $Servers
         SecuritySchemes = $SecuritySchemes
         Security        = $Security

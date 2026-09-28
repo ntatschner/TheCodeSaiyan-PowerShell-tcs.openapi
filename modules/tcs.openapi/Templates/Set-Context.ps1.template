@@ -59,10 +59,13 @@ function Set-{{Prefix}}Context {
     .EXAMPLE
         Set-{{Prefix}}Context{{ConnectExample}}
 
+        Sets the connection for this session; add -Persist to save it for later sessions.
+
+{{HelpLink}}
     .LINK
         Set-OpenApiContext
     #>
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low'{{HelpUriArgument}})]
     param(
 {{BaseUriParameter}}
 

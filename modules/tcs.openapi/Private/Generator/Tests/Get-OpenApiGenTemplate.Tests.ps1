@@ -11,7 +11,7 @@ BeforeAll {
 Describe 'Get-OpenApiGenTemplate' {
     It 'reads every template of the module' {
         $templates = InModuleScope tcs.openapi { Get-OpenApiGenTemplate -Path (Join-Path -Path $script:TcsOpenApiModuleRoot -ChildPath 'Templates') }
-        @($templates.Keys | Sort-Object) | Should -Be @('Function.ps1', 'Get-Context.ps1', 'Module.psd1', 'Module.psm1', 'Overrides.ps1', 'README.md', 'Remove-Context.ps1', 'Set-Context.ps1')
+        @($templates.Keys | Sort-Object) | Should -Be @('About.help.txt', 'Function.ps1', 'Get-Context.ps1', 'Module.psd1', 'Module.psm1', 'Overrides.ps1', 'README.md', 'Remove-Context.ps1', 'Set-Context.ps1')
     }
 
     It 'normalises line endings to LF' {

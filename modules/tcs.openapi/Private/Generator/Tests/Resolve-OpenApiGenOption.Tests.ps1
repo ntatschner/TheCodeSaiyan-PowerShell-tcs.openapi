@@ -31,6 +31,16 @@ Describe 'Resolve-OpenApiGenOption' {
         $option.Author | Should -Be 'Me'
     }
 
+    It 'keeps a valid help URI and has none by default' {
+        (InModuleScope tcs.openapi { Resolve-OpenApiGenOption -ModuleName 'Good' -OutputPath '/out' -GeneratorVersion '0.1.0' -HelpUri ' https://docs.example.com/good/{0} ' }).HelpUri | Should -BeExactly 'https://docs.example.com/good/{0}'
+        (InModuleScope tcs.openapi { Resolve-OpenApiGenOption -ModuleName 'Good' -OutputPath '/out' -GeneratorVersion '0.1.0' }).HelpUri | Should -BeExactly ''
+    }
+
+    It 'rejects the help URI <HelpUri>' -TestCases @(@{ HelpUri = 'docs/{0}' }, @{ HelpUri = 'ftp://docs.example.com/{0}' }, @{ HelpUri = 'https://docs.example.com/{1}' }, @{ HelpUri = 'https://docs.example.com/a b' }) {
+        param($HelpUri)
+        { InModuleScope tcs.openapi -Parameters @{ HelpUri = $HelpUri } { param($HelpUri) Resolve-OpenApiGenOption -ModuleName 'Good' -OutputPath '/out' -GeneratorVersion '0.1.0' -HelpUri $HelpUri } } | Should -Throw '*help URI*not valid*'
+    }
+
     It 'rejects an invalid module name or prefix' {
         { InModuleScope tcs.openapi { Resolve-OpenApiGenOption -ModuleName '1bad' -OutputPath '/out' -GeneratorVersion '0.1.0' } } | Should -Throw '*not valid*'
         { InModuleScope tcs.openapi { Resolve-OpenApiGenOption -ModuleName 'Good' -OutputPath '/out' -NounPrefix 'a-b' -GeneratorVersion '0.1.0' } } | Should -Throw '*not valid*'
