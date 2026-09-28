@@ -149,7 +149,7 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>Import-OpenApiDocument loads a document from a file, a URL or a string, detects its version and returns one OpenAPI 3-shaped model (PSTypeName Tcs.OpenApi.Document) whatever the input version: Title, Version, Description, Servers, SecuritySchemes, Security, Schemas, Operations and Findings.</maml:para>
+      <maml:para>Import-OpenApiDocument loads a document from a file, a URL or a string, detects its version and returns one OpenAPI 3-shaped model (PSTypeName Tcs.OpenApi.Document) whatever the input version: Title, Version, Description, ContactUrl, LicenseName, LicenseUrl, ExternalDocsUrl, Servers, SecuritySchemes, Security, Schemas, Operations and Findings.</maml:para>
       <maml:para>- JSON is always supported. YAML needs ConvertFrom-Yaml from the powershell-yaml module; without it   the command stops with an error that says so. - Swagger 2.0 documents are converted: host/basePath/schemes become Servers, definitions become   Schemas, body and formData parameters become a RequestBody, collectionFormat becomes style/explode   and securityDefinitions become SecuritySchemes. - Local $refs are resolved (circular schemas are marked Recursive); external $refs are reported and   the operations that use them are flagged Unsupported. - Problems met while normalising are returned in the model's Findings (see Test-OpenApiDocument).</maml:para>
       <maml:para>The model is plain data (PSCustomObject, ordered dictionaries and arrays), so it can be saved with ConvertTo-Json -Depth 100.</maml:para>
     </maml:description>
@@ -786,9 +786,10 @@ Invoke-OpenApiRequest -Service 'PetStore' -Operation $operation -PathParameters 
     </command:details>
     <maml:description>
       <maml:para>New-OpenApiModule turns an OpenAPI document into a module with one command per operation. Each command has PowerShell parameters for the operation's path, query, header and cookie parameters and for the properties of a JSON request body (or -Body), comment-based help, and calls Invoke-OpenApiRequest from tcs.openapi, which handles authentication, serialisation, retry, paging and errors. The generated module requires tcs.openapi, so fixes to the request engine reach it without regenerating.</maml:para>
-      <maml:para>The module is written to &lt;OutputPath&gt;/&lt;ModuleName&gt;:   &lt;ModuleName&gt;.psd1 / .psm1   manifest and root module   OpenApi/operations.json     operation metadata used by the request engine   OpenApi/source.json         the normalised document (for regeneration diffs)   Public/&lt;Tag&gt;/&lt;Verb&gt;-&lt;Noun&gt;.ps1   one command per operation   Public/_Connection/         Set-, Get- and Remove-&lt;Prefix&gt;Context   Overrides.ps1               created once, never overwritten: your own changes go here   README.md                   the list of commands</maml:para>
+      <maml:para>The module is written to &lt;OutputPath&gt;/&lt;ModuleName&gt;:   &lt;ModuleName&gt;.psd1 / .psm1   manifest and root module   OpenApi/operations.json     operation metadata used by the request engine   OpenApi/source.json         the normalised document (for regeneration diffs)   Public/&lt;Tag&gt;/&lt;Verb&gt;-&lt;Noun&gt;.ps1   one command per operation   Public/_Connection/         Set-, Get- and Remove-&lt;Prefix&gt;Context   Overrides.ps1               created once, never overwritten: your own changes go here   README.md                   the list of commands   en-US/about_&lt;ModuleName&gt;.help.txt   the module's about topic</maml:para>
       <maml:para>Existing generated files are replaced only with -Force; Overrides.ps1 is never replaced. The same document and options always give byte-identical files. Problems found in the document and by the generator (renamed commands OA040, commands renamed so they do not shadow a core PowerShell command OA042, renamed parameters OA041, skipped operations OA070) are returned in Findings.</maml:para>
       <maml:para>Generated commands that can change data have -WhatIf and -Confirm: every DELETE (ConfirmImpact High), every POST, PUT and PATCH (ConfirmImpact Medium) except Get- and Test- commands, which only read (for example a query sent as a POST with a body), and any command whose verb changes state (New, Set, Remove, Start, Stop, Restart, Reset, Update). Other commands have neither.</maml:para>
+      <maml:para>The comment-based help of the generated commands is plain text that PlatyPS can turn into Markdown for MDX sites (Docusaurus, Astro Starlight): HTML and Markdown from the document are converted, words with '&lt;', '{' or '}' and the operation ids and paths are code spans, and every example has a description. The manifest gets ProjectUri and LicenseUri from the document's externalDocs, contact and licence URLs.</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -846,6 +847,18 @@ Invoke-OpenApiRequest -Service 'PetStore' -Operation $operation -PathParameters 
           <maml:name>UnwrapProperty</maml:name>
           <maml:description>
             <maml:para>The name of a response property that wraps the actual result, such as 'data' for APIs that answer { "data": {...}, "traceId": "..." }. For every operation whose first 2xx JSON response schema is an object with this property, the command outputs the value of the property instead of the whole response (array values item by item), typed with the property's schema name when it has one. It is applied only when a response actually has the property, never with -Raw, and not to pageable operations, which output the items of each page already. Stored per operation in OpenApi/operations.json (UnwrapProperty).</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>HelpUri</maml:name>
+          <maml:description>
+            <maml:para>The online help address of the generated commands, with {0} where the command name goes, for example 'https://docs.example.com/unifi/{0}'. Each command gets it as its HelpUri and first .LINK, so Get-Help -Online opens it and PlatyPS writes it as 'online version'; the about topic lists it with {0} = about_&lt;ModuleName&gt;. Without {0} every command links to the same address. It must be an absolute http or https URL.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
@@ -988,6 +1001,18 @@ Invoke-OpenApiRequest -Service 'PetStore' -Operation $operation -PathParameters 
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>HelpUri</maml:name>
+          <maml:description>
+            <maml:para>The online help address of the generated commands, with {0} where the command name goes, for example 'https://docs.example.com/unifi/{0}'. Each command gets it as its HelpUri and first .LINK, so Get-Help -Online opens it and PlatyPS writes it as 'online version'; the about topic lists it with {0} = about_&lt;ModuleName&gt;. Without {0} every command links to the same address. It must be an absolute http or https URL.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>ModuleVersion</maml:name>
           <maml:description>
             <maml:para>The version of the generated module. Defaults to 0.1.0.</maml:para>
@@ -1112,6 +1137,18 @@ Invoke-OpenApiRequest -Service 'PetStore' -Operation $operation -PathParameters 
           <maml:name>UnwrapProperty</maml:name>
           <maml:description>
             <maml:para>The name of a response property that wraps the actual result, such as 'data' for APIs that answer { "data": {...}, "traceId": "..." }. For every operation whose first 2xx JSON response schema is an object with this property, the command outputs the value of the property instead of the whole response (array values item by item), typed with the property's schema name when it has one. It is applied only when a response actually has the property, never with -Raw, and not to pageable operations, which output the items of each page already. Stored per operation in OpenApi/operations.json (UnwrapProperty).</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>HelpUri</maml:name>
+          <maml:description>
+            <maml:para>The online help address of the generated commands, with {0} where the command name goes, for example 'https://docs.example.com/unifi/{0}'. Each command gets it as its HelpUri and first .LINK, so Get-Help -Online opens it and PlatyPS writes it as 'online version'; the about topic lists it with {0} = about_&lt;ModuleName&gt;. Without {0} every command links to the same address. It must be an absolute http or https URL.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
@@ -1278,6 +1315,18 @@ Invoke-OpenApiRequest -Service 'PetStore' -Operation $operation -PathParameters 
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>HelpUri</maml:name>
+        <maml:description>
+          <maml:para>The online help address of the generated commands, with {0} where the command name goes, for example 'https://docs.example.com/unifi/{0}'. Each command gets it as its HelpUri and first .LINK, so Get-Help -Online opens it and PlatyPS writes it as 'online version'; the about topic lists it with {0} = about_&lt;ModuleName&gt;. Without {0} every command links to the same address. It must be an absolute http or https URL.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>ModuleVersion</maml:name>
         <maml:description>
           <maml:para>The version of the generated module. Defaults to 0.1.0.</maml:para>
@@ -1426,6 +1475,13 @@ $result.Findings | Where-Object Severity -NE 'Information'</dev:code>
       </command:example>
       <command:example>
         <maml:title>-------------------------- EXAMPLE 4 --------------------------</maml:title>
+        <dev:code>New-OpenApiModule -Path ./sitemanager.json -ModuleName UniFi.SiteManager -NounPrefix UniFi -OutputPath ./out -HelpUri 'https://docs.example.com/unifi/{0}'</dev:code>
+        <dev:remarks>
+          <maml:para>Links every command to its page on a documentation site (Get-Help Get-UniFiHost -Online opens https://docs.example.com/unifi/Get-UniFiHost).</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- EXAMPLE 5 --------------------------</maml:title>
         <dev:code>New-OpenApiModule -Path ./api.json -ModuleName Example -NounPrefix Ex -OutputPath ./out -WhatIf</dev:code>
         <dev:remarks>
           <maml:para>Shows the files that would be written.</maml:para>

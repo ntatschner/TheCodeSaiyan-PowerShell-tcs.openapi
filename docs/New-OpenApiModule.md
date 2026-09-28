@@ -15,21 +15,21 @@ Generates a PowerShell module of wrapper commands from an OpenAPI 3.0/3.1 or Swa
 ### Document (Default)
 ```
 New-OpenApiModule -Document <PSObject> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
- [-UnwrapProperty <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
+ [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ### Path
 ```
 New-OpenApiModule -Path <String> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
- [-UnwrapProperty <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
+ [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ### Uri
 ```
 New-OpenApiModule -Uri <Uri> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
- [-UnwrapProperty <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
+ [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
@@ -51,6 +51,7 @@ The module is written to \<OutputPath\>/\<ModuleName\>:
   Public/_Connection/         Set-, Get- and Remove-\<Prefix\>Context
   Overrides.ps1               created once, never overwritten: your own changes go here
   README.md                   the list of commands
+  en-US/about_\<ModuleName\>.help.txt   the module's about topic
 
 Existing generated files are replaced only with -Force; Overrides.ps1 is never replaced.
 The same
@@ -65,6 +66,13 @@ High), every POST, PUT and PATCH (ConfirmImpact Medium) except Get- and Test- co
 read (for example a query sent as a POST with a body), and any command whose verb changes state
 (New, Set, Remove, Start, Stop, Restart, Reset, Update).
 Other commands have neither.
+
+The comment-based help of the generated commands is plain text that PlatyPS can turn into
+Markdown for MDX sites (Docusaurus, Astro Starlight): HTML and Markdown from the document are
+converted, words with '\<', '{' or '}' and the operation ids and paths are code spans, and every
+example has a description.
+The manifest gets ProjectUri and LicenseUri from the document's
+externalDocs, contact and licence URLs.
 
 ## EXAMPLES
 
@@ -93,6 +101,14 @@ Generates a module whose commands return the 'data' property of the API's respon
 returns the host, not the { data, httpStatusCode, traceId } envelope).
 
 ### EXAMPLE 4
+```
+New-OpenApiModule -Path ./sitemanager.json -ModuleName UniFi.SiteManager -NounPrefix UniFi -OutputPath ./out -HelpUri 'https://docs.example.com/unifi/{0}'
+```
+
+Links every command to its page on a documentation site (Get-Help Get-UniFiHost -Online opens
+https://docs.example.com/unifi/Get-UniFiHost).
+
+### EXAMPLE 5
 ```
 New-OpenApiModule -Path ./api.json -ModuleName Example -NounPrefix Ex -OutputPath ./out -WhatIf
 ```
@@ -217,6 +233,28 @@ applied only when a response actually has the property, never with -Raw, and not
 operations, which output the items of each page already.
 Stored per operation in
 OpenApi/operations.json (UnwrapProperty).
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -HelpUri
+The online help address of the generated commands, with {0} where the command name goes, for
+example 'https://docs.example.com/unifi/{0}'.
+Each command gets it as its HelpUri and first .LINK,
+so Get-Help -Online opens it and PlatyPS writes it as 'online version'; the about topic lists it
+with {0} = about_\<ModuleName\>.
+Without {0} every command links to the same address.
+It must be an
+absolute http or https URL.
 
 ```yaml
 Type: String
