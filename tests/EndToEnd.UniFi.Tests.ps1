@@ -33,6 +33,9 @@ BeforeAll {
         if ($Request.Method -eq 'GET' -and $Request.Path -eq '/v1/sd-wan-configs') {
             return @{ Body = '{"data":[{"id":"s1","name":"A"},{"id":"s2","name":"B"}],"httpStatusCode":200,"traceId":"t"}'; ContentType = $json }
         }
+        if ($Request.Method -eq 'POST' -and $Request.Path -eq '/v1/isp-metrics/5m/query') {
+            return @{ Body = '{"data":{"metrics":[{"metricType":"5m","hostId":"h1","siteId":"s1"}]},"httpStatusCode":200,"traceId":"t"}'; ContentType = $json }
+        }
         if ($Request.Path -like '/v1/connector/consoles/*') {
             return @{ Body = ('{"method":"' + $Request.Method + '","count":1,"data":[{"id":"site-1"}]}'); ContentType = $json }
         }
@@ -81,6 +84,16 @@ Describe 'UniFi Site Manager module (end to end)' {
             foreach ($name in @('Get-UniFiConnector', 'New-UniFiConnector', 'Set-UniFiConnector', 'Update-UniFiConnector', 'Remove-UniFiConnector')) {
                 (Get-Command -Name $name).Parameters.Keys | Should -Contain 'Id'
                 (Get-Command -Name $name).Parameters.Keys | Should -Contain 'Path'
+            }
+        }
+
+        It 'gives -WhatIf and -Confirm to the commands that change state, not to the Get commands' {
+            foreach ($command in @(Get-Command -Module 'UniFi.SiteManager' -Verb 'Get')) {
+                $command.Parameters.Keys | Should -Not -Contain 'WhatIf' -Because $command.Name
+                $command.Parameters.Keys | Should -Not -Contain 'Confirm' -Because $command.Name
+            }
+            foreach ($name in @('New-UniFiConnector', 'Set-UniFiConnector', 'Update-UniFiConnector', 'Remove-UniFiConnector')) {
+                (Get-Command -Name $name).Parameters.Keys | Should -Contain 'WhatIf'
             }
         }
 
@@ -157,6 +170,14 @@ Describe 'UniFi Site Manager module (end to end)' {
             if ($Method -ne 'DELETE') {
                 $script:server.Requests[0].Body | Should -Be '{"action":"AUTHORIZE_GUEST_ACCESS"}'
             }
+        }
+
+        It 'sends the ISP metrics query as a POST although Get-UniFiIspMetricQuery has no -WhatIf' {
+            $result = Get-UniFiIspMetricQuery -Type '5m' -Body @{ sites = @([ordered]@{ hostId = 'h1'; siteId = 's1' }) }
+            @($result.metrics).Count | Should -Be 1
+            $script:server.Requests[0].Method | Should -Be 'POST'
+            $script:server.Requests[0].RawUrl | Should -Be '/v1/isp-metrics/5m/query'
+            $script:server.Requests[0].Body | Should -Be '{"sites":[{"hostId":"h1","siteId":"s1"}]}'
         }
 
         It 'sends nothing for New-UniFiConnector -WhatIf' {

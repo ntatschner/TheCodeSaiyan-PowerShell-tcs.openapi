@@ -6,9 +6,10 @@ function ConvertTo-OpenApiGenFunction {
     .DESCRIPTION
         Takes the resolved command name, the operation, its parameter model (Get-OpenApiGenParameterModel)
         and the response type name, and returns the source text of the function: comment-based help,
-        [CmdletBinding()] (ShouldProcess for every method except GET/HEAD/OPTIONS, and for any verb that
-        changes state), [OutputType()] when the response type is known, the param() block and a process
-        block that passes only bound parameters to Invoke-OpenApiRequest.
+        [CmdletBinding()] (ShouldProcess for every method except GET/HEAD/OPTIONS unless the verb is Get
+        or Test, for every DELETE, and for any verb that changes state), [OutputType()] when the response
+        type is known, the param() block and a process block that passes only bound parameters to
+        Invoke-OpenApiRequest.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -37,7 +38,11 @@ function ConvertTo-OpenApiGenFunction {
     $operationId = [string]$Operation.OperationId
     $parameters = @($ParameterModel.Parameters)
     $stateVerbs = @('New', 'Set', 'Remove', 'Start', 'Stop', 'Restart', 'Reset', 'Update')
-    $shouldProcess = (@('GET', 'HEAD', 'OPTIONS') -notcontains $method) -or ($stateVerbs -contains $CommandName.Verb)
+    # Get and Test only read, also when the API takes the request as a POST (a query or a validation
+    # with a body). A DELETE always asks.
+    $readVerbs = @('Get', 'Test')
+    $shouldProcess = ($method -eq 'DELETE') -or ($stateVerbs -contains $CommandName.Verb) -or
+    ((@('GET', 'HEAD', 'OPTIONS') -notcontains $method) -and ($readVerbs -notcontains $CommandName.Verb))
     $deprecated = ($Operation.Deprecated -eq $true)
 
     #region help

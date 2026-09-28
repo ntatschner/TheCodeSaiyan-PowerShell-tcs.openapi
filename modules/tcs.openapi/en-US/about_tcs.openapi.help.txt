@@ -144,6 +144,16 @@ NAMING
     segment or the method (OA040); parameters that clash with common
     parameters get a location suffix (OA041).
 
+WHATIF AND CONFIRM
+    A generated command has -WhatIf and -Confirm when it can change data:
+    every DELETE (ConfirmImpact High); every POST, PUT and PATCH
+    (ConfirmImpact Medium) except Get- and Test- commands, because an
+    operationId that starts with get, list, find, search, query, validate,
+    check or verify is a read that some APIs send as a POST with a body; and
+    any command whose verb changes state (New, Set, Remove, Start, Stop,
+    Restart, Reset, Update). Other GET, HEAD and OPTIONS commands have
+    neither, so a read still runs under $WhatIfPreference = $true.
+
 SEE ALSO
     Import-OpenApiDocument
     Test-OpenApiDocument

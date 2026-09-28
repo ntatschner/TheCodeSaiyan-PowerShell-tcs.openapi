@@ -82,10 +82,25 @@ Get-UniFiConnector -Id $id -Path 'proxy/network/integration/v1/sites'
 
 The same document and options always give byte-identical files. Existing generated files are replaced only with
 `-Force` (which also removes command files for operations that are gone). Every command has comment-based help
-built from the document, `[CmdletBinding()]`, `-WhatIf`/`-Confirm` for every method except GET/HEAD/OPTIONS
-(`ConfirmImpact = 'High'` for DELETE), and `-Raw`; pageable operations get `-All` and binary responses `-OutFile`.
+built from the document, `[CmdletBinding()]`, `-WhatIf`/`-Confirm` for the commands that change data (see below),
+and `-Raw`; pageable operations get `-All` and binary responses `-OutFile`.
 JSON object bodies are flattened into one parameter per writable top-level property (nested objects as
 `[hashtable]`), with `-Body` as an alternative parameter set for the whole body.
+
+### -WhatIf and -Confirm
+
+A generated command gets `-WhatIf` and `-Confirm` when it can change data:
+
+- every DELETE (`ConfirmImpact = 'High'`);
+- every POST, PUT and PATCH (`ConfirmImpact = 'Medium'`), except `Get-` and `Test-` commands: an operationId
+  that starts with get, list, find, search or query (`Get-`), or validate, check or verify (`Test-`), is a read
+  that some APIs send as a POST with a body, such as `POST /v1/isp-metrics/{type}/query` (`Get-UniFiIspMetricQuery`);
+- any command whose verb changes state (`New`, `Set`, `Remove`, `Start`, `Stop`, `Restart`, `Reset`, `Update`),
+  whatever its method.
+
+GET, HEAD and OPTIONS commands with any other verb have neither. A read therefore still runs under
+`$WhatIfPreference = $true`, and PSScriptAnalyzer's `PSUseShouldProcessForStateChangingFunctions` rule is met. Use
+`x-ps-verb` or `x-ps-name` in the document to change the verb of an operation.
 
 ### Overrides.ps1
 

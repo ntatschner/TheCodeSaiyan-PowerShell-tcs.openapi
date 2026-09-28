@@ -60,6 +60,34 @@ Describe 'ConvertTo-OpenApiGenFunction' {
         (ConvertTo-TestFunction -Operation (New-TestOperation -OperationId 'resetCache' -Method GET -Path '/cache')).Text | Should -Match 'SupportsShouldProcess'
     }
 
+    It 'does not use ShouldProcess for <Verb> from <OperationId> on <Method>' -TestCases @(
+        @{ OperationId = 'queryMetrics'; Method = 'POST'; Verb = 'Get' }
+        @{ OperationId = 'searchOrders'; Method = 'POST'; Verb = 'Get' }
+        @{ OperationId = 'getReport'; Method = 'PUT'; Verb = 'Get' }
+        @{ OperationId = 'validateOrder'; Method = 'POST'; Verb = 'Test' }
+        @{ OperationId = 'checkAddress'; Method = 'PATCH'; Verb = 'Test' }
+    ) {
+        param($OperationId, $Method, $Verb)
+        $result = ConvertTo-TestFunction -Operation (New-TestOperation -OperationId $OperationId -Method $Method -Path '/things')
+        $result.Name | Should -BeLike "$Verb-*"
+        $result.Text | Should -Not -Match 'ShouldProcess'
+        $result.Check.ParameterNames | Should -Not -Contain 'WhatIf'
+        $result.Check.ParameterNames | Should -Not -Contain 'Confirm'
+    }
+
+    It 'uses ShouldProcess for <Verb> from <OperationId> on <Method>' -TestCases @(
+        @{ OperationId = 'runReport'; Method = 'POST'; Verb = 'Invoke' }
+        @{ OperationId = 'sendMessage'; Method = 'POST'; Verb = 'Send' }
+        @{ OperationId = 'exportOrders'; Method = 'POST'; Verb = 'Export' }
+        @{ OperationId = 'getRidOfOrder'; Method = 'DELETE'; Verb = 'Get' }
+    ) {
+        param($OperationId, $Method, $Verb)
+        $result = ConvertTo-TestFunction -Operation (New-TestOperation -OperationId $OperationId -Method $Method -Path '/things')
+        $result.Name | Should -BeLike "$Verb-*"
+        $result.Text | Should -Match 'SupportsShouldProcess'
+        $result.Check.ParameterNames | Should -Contain 'WhatIf'
+    }
+
     It 'renders a flattened body with two parameter sets' {
         $operation = New-TestOperation -OperationId 'createOrder' -Method POST -Path '/orders' -RequestBody (New-TestRequestBody -Required -Content @((New-TestMediaType -ContentType 'application/json' -Schema $orderSchema)))
         $result = ConvertTo-TestFunction -Operation $operation

@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-28
+
+### Fixed
+
+- Generated `Get-` and `Test-` commands no longer have `-WhatIf` and `-Confirm` when their operation
+  uses POST, PUT or PATCH. An operationId that starts with get, list, find, search or query (`Get-`),
+  or validate, check or verify (`Test-`), is a read that some APIs send with a body, such as the
+  UniFi Site Manager `POST /v1/isp-metrics/{type}/query` (`Get-UniFiIspMetricQuery`). Such a command
+  now runs under `$WhatIfPreference = $true` like any other read. DELETE operations and the verbs
+  that change state (`New`, `Set`, `Remove`, `Start`, `Stop`, `Restart`, `Reset`, `Update`) keep
+  `-WhatIf` and `-Confirm` whatever their name, and so do all other verbs on POST, PUT and PATCH
+  (`Invoke`, `Send`, `Submit`, `Export`, ...). Regenerate a module with `-Force` to pick this up.
+
+### Changed
+
+- The README, `about_tcs.openapi`, the `New-OpenApiModule` help and the generated README describe
+  which commands get `-WhatIf` and `-Confirm`.
+
 ## [0.2.1] - 2026-09-27
 
 ### Changed
