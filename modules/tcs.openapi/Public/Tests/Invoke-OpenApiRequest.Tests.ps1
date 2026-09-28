@@ -60,6 +60,28 @@ Describe 'Invoke-OpenApiRequest' {
         $stream.Dispose()
     }
 
+    It 'takes the caller''s preferences and sends a read under $WhatIfPreference' {
+        # A generated Get- command has no -WhatIf, so a session-wide $WhatIfPreference must not stop the engine
+        # from copying the caller's preferences (Set-Variable honours -WhatIf) or from sending the request.
+        # $WhatIfPreference reaches the module through the global scope, so it is set there
+        function Invoke-TestRead {
+            [CmdletBinding()]
+            param()
+            Invoke-OpenApiRequest -Service 'Direct' -Operation @{ Path = '/read' } -Cmdlet $PSCmdlet
+        }
+        $saved = $global:WhatIfPreference
+        try {
+            $global:WhatIfPreference = $true
+            $output = @(Invoke-TestRead -Verbose 4>&1)
+        }
+        finally {
+            $global:WhatIfPreference = $saved
+        }
+        $script:server.Requests.Count | Should -Be 1
+        @($output | Where-Object -FilterScript { $_ -is [System.Management.Automation.VerboseRecord] }).Count | Should -BeGreaterThan 0
+        ($output | Where-Object -FilterScript { $_ -isnot [System.Management.Automation.VerboseRecord] }).path | Should -Be '/read'
+    }
+
     It 'writes an error when no service name is known' {
         { Invoke-OpenApiRequest -Operation @{ Path = '/x' } -ErrorAction Stop } | Should -Throw -ErrorId 'OpenApi.MissingService*'
     }

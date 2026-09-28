@@ -8,7 +8,7 @@
     CompatiblePSEditions = @('Desktop', 'Core')
     PowerShellVersion    = '5.1'
     RequiredModules      = @(
-        @{ ModuleName = 'tcs.openapi'; ModuleVersion = '0.3.0' }
+        @{ ModuleName = 'tcs.openapi'; ModuleVersion = '0.3.1' }
     )
     FunctionsToExport    = @(
         'Get-ShopContext',
