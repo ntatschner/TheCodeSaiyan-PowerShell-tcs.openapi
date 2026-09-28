@@ -60,6 +60,12 @@ generator (renamed commands OA040, commands renamed so they do not shadow a core
 command OA042, renamed parameters OA041, skipped operations OA070) are
 returned in Findings.
 
+Generated commands that can change data have -WhatIf and -Confirm: every DELETE (ConfirmImpact
+High), every POST, PUT and PATCH (ConfirmImpact Medium) except Get- and Test- commands, which only
+read (for example a query sent as a POST with a body), and any command whose verb changes state
+(New, Set, Remove, Start, Stop, Restart, Reset, Update).
+Other commands have neither.
+
 ## EXAMPLES
 
 ### EXAMPLE 1
