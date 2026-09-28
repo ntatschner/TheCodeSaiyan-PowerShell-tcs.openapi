@@ -59,6 +59,8 @@ function Set-ShopContext {
     .EXAMPLE
         Set-ShopContext -BaseUri 'https://api.example.com' -ClientId '<client id>' -ClientSecret (Read-Host -AsSecureString -Prompt 'Client secret')
 
+        Sets the connection for this session; add -Persist to save it for later sessions.
+
     .LINK
         Set-OpenApiContext
     #>

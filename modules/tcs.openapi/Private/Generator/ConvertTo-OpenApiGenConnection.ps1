@@ -9,6 +9,7 @@ function ConvertTo-OpenApiGenConnection {
         variables replaced by their defaults); without one it is mandatory. The example (and the README's
         'Getting started') passes -BaseUri only when it is mandatory, plus -AuthExample (see
         Get-OpenApiGenAuthExample).
+        -HelpUri (with {0} for the command name) gives each command a HelpUri and a first .LINK.
         Returns one { Name, RelativePath, ConnectExample, Text } per command (ConnectExample is the
         parameter text of the example, for the README).
     #>
@@ -34,7 +35,12 @@ function ConvertTo-OpenApiGenConnection {
         [string]$AuthExample = " -BearerToken (Read-Host -AsSecureString -Prompt 'Token')",
 
         [Parameter(Mandatory = $true)]
-        [hashtable]$Template
+        [hashtable]$Template,
+
+        [Parameter()]
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$HelpUri
     )
 
     $baseUri = $null
@@ -81,6 +87,16 @@ function ConvertTo-OpenApiGenConnection {
     }
     foreach ($verb in @('Set', 'Get', 'Remove')) {
         $name = "$verb-$($Prefix)Context"
+        $values['HelpLink'] = ''
+        $values['HelpUriArgument'] = ''
+        $values['HelpUriBinding'] = ''
+        if (-not [string]::IsNullOrWhiteSpace($HelpUri)) {
+            $uri = $HelpUri.Replace('{0}', $name)
+            $literal = ConvertTo-OpenApiGenLiteral -Value $uri
+            $values['HelpLink'] = "    .LINK`n        $uri`n"
+            $values['HelpUriArgument'] = ", HelpUri = $literal"
+            $values['HelpUriBinding'] = "HelpUri = $literal"
+        }
         [pscustomobject]@{
             Name           = $name
             RelativePath   = "Public/_Connection/$name.ps1"

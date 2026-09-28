@@ -47,6 +47,29 @@ Describe 'ConvertTo-OpenApiGenManifest' {
         $first.Substring(14, 1) | Should -Be '5'
     }
 
+    It 'takes ProjectUri and LicenseUri from the document when they are web URLs' {
+        $document = New-TestDocument -Title 'Shop' -ExternalDocsUrl 'https://docs.example.com' -ContactUrl 'https://example.com/support' -LicenseUrl 'https://example.com/license'
+        $text = InModuleScope tcs.openapi -Parameters @{ Document = $document } {
+            param($Document)
+            $option = Resolve-OpenApiGenOption -ModuleName 'Shop' -OutputPath '/out' -GeneratorVersion '1.2.3'
+            ConvertTo-OpenApiGenManifest -Option $option -Document $Document -FunctionName @('Get-ShopOrder') -Template (Get-OpenApiGenTemplate -Path (Join-Path -Path $script:TcsOpenApiModuleRoot -ChildPath 'Templates'))['Module.psd1']
+        }
+        $data = & ([scriptblock]::Create($text))
+        $data.PrivateData.PSData.ProjectUri | Should -Be 'https://docs.example.com'
+        $data.PrivateData.PSData.LicenseUri | Should -Be 'https://example.com/license'
+
+        $document = New-TestDocument -Title 'Shop' -ContactUrl 'https://example.com/support' -LicenseUrl 'mailto:x@example.com'
+        $text = InModuleScope tcs.openapi -Parameters @{ Document = $document } {
+            param($Document)
+            $option = Resolve-OpenApiGenOption -ModuleName 'Shop' -OutputPath '/out' -GeneratorVersion '1.2.3'
+            ConvertTo-OpenApiGenManifest -Option $option -Document $Document -FunctionName @('Get-ShopOrder') -Template (Get-OpenApiGenTemplate -Path (Join-Path -Path $script:TcsOpenApiModuleRoot -ChildPath 'Templates'))['Module.psd1']
+        }
+        $data = & ([scriptblock]::Create($text))
+        $data.PrivateData.PSData.ProjectUri | Should -Be 'https://example.com/support'
+        $data.PrivateData.PSData.Keys | Should -Not -Contain 'LicenseUri'
+        (ConvertTo-TestManifest) | Should -Not -Match 'ProjectUri|LicenseUri'
+    }
+
     It 'renders an empty export list' {
         { [scriptblock]::Create((ConvertTo-TestManifest -FunctionName @())) } | Should -Not -Throw
     }

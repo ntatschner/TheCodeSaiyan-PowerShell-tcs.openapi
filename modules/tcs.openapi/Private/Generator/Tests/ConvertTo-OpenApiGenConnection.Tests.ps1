@@ -11,11 +11,11 @@ BeforeAll {
 Describe 'ConvertTo-OpenApiGenConnection' {
     BeforeAll {
         function ConvertTo-TestConnection {
-            param([object[]]$Server, [object]$AuthExample)
-            InModuleScope tcs.openapi -Parameters @{ Server = $Server; AuthExample = $AuthExample } {
-                param($Server, $AuthExample)
+            param([object[]]$Server, [object]$AuthExample, [string]$HelpUri)
+            InModuleScope tcs.openapi -Parameters @{ Server = $Server; AuthExample = $AuthExample; HelpUri = $HelpUri } {
+                param($Server, $AuthExample, $HelpUri)
                 $templates = Get-OpenApiGenTemplate -Path (Join-Path -Path $script:TcsOpenApiModuleRoot -ChildPath 'Templates')
-                $arguments = @{ Prefix = 'Shop'; Service = 'Shop.Api'; ModuleName = 'Shop.Api'; Server = $Server; Template = $templates }
+                $arguments = @{ Prefix = 'Shop'; Service = 'Shop.Api'; ModuleName = 'Shop.Api'; Server = $Server; Template = $templates; HelpUri = $HelpUri }
                 if ($null -ne $AuthExample) {
                     $arguments['AuthExample'] = [string]$AuthExample
                 }
@@ -29,6 +29,19 @@ Describe 'ConvertTo-OpenApiGenConnection' {
         $commands.Name | Should -Be @('Set-ShopContext', 'Get-ShopContext', 'Remove-ShopContext')
         $commands.RelativePath | Should -Be @('Public/_Connection/Set-ShopContext.ps1', 'Public/_Connection/Get-ShopContext.ps1', 'Public/_Connection/Remove-ShopContext.ps1')
         foreach ($command in $commands) {
+            (InModuleScope tcs.openapi -Parameters @{ C = $command } { param($C) Test-OpenApiGenFunction -Text $C.Text -FunctionName $C.Name }).IsValid | Should -BeTrue
+        }
+    }
+
+    It 'gives every example a description and links to -HelpUri first' {
+        foreach ($command in @(ConvertTo-TestConnection -Server @())) {
+            $command.Text | Should -Match '\.EXAMPLE\n\s+\S.*\n\n\s+[A-Z].*\.\n' -Because $command.Name
+            $command.Text | Should -Not -Match 'HelpUri'
+        }
+        foreach ($command in @(ConvertTo-TestConnection -Server @() -HelpUri 'https://docs.example.com/shop/{0}')) {
+            $uri = "https://docs.example.com/shop/$($command.Name)"
+            $command.Text | Should -Match ("HelpUri = '" + [regex]::Escape($uri) + "'\)\]")
+            $command.Text | Should -Match ('\.LINK\n\s+' + [regex]::Escape($uri) + '\n\n\s+\.LINK\n\s+\w+-OpenApiContext')
             (InModuleScope tcs.openapi -Parameters @{ C = $command } { param($C) Test-OpenApiGenFunction -Text $C.Text -FunctionName $C.Name }).IsValid | Should -BeTrue
         }
     }

@@ -28,6 +28,10 @@ function ConvertTo-OpenApiDocumentModel {
         Title           = $null
         Version         = $null
         Description     = $null
+        ContactUrl      = $null
+        LicenseName     = $null
+        LicenseUrl      = $null
+        ExternalDocsUrl = $null
         Servers         = @()
         SecuritySchemes = [System.Collections.Specialized.OrderedDictionary]::new([System.StringComparer]::Ordinal)
         Security        = @()
@@ -55,6 +59,20 @@ function ConvertTo-OpenApiDocumentModel {
                 $model.($pair[1]) = [string]$info[$pair[0]]
             }
         }
+        if ($info['contact'] -is [System.Collections.IDictionary] -and $null -ne $info['contact']['url']) {
+            $model.ContactUrl = [string]$info['contact']['url']
+        }
+        if ($info['license'] -is [System.Collections.IDictionary]) {
+            if ($null -ne $info['license']['name']) {
+                $model.LicenseName = [string]$info['license']['name']
+            }
+            if ($null -ne $info['license']['url']) {
+                $model.LicenseUrl = [string]$info['license']['url']
+            }
+        }
+    }
+    if ($Root['externalDocs'] -is [System.Collections.IDictionary] -and $null -ne $Root['externalDocs']['url']) {
+        $model.ExternalDocsUrl = [string]$Root['externalDocs']['url']
     }
 
     $model.Servers = Get-OpenApiServerList -Servers $Root['servers'] -BaseUri $BaseUri

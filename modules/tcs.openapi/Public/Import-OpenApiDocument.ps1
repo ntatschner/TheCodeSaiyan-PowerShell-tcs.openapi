@@ -5,7 +5,8 @@
 .DESCRIPTION
     Import-OpenApiDocument loads a document from a file, a URL or a string, detects its version and
     returns one OpenAPI 3-shaped model (PSTypeName Tcs.OpenApi.Document) whatever the input version:
-    Title, Version, Description, Servers, SecuritySchemes, Security, Schemas, Operations and Findings.
+    Title, Version, Description, ContactUrl, LicenseName, LicenseUrl, ExternalDocsUrl, Servers,
+    SecuritySchemes, Security, Schemas, Operations and Findings.
 
     - JSON is always supported. YAML needs ConvertFrom-Yaml from the powershell-yaml module; without it
       the command stops with an error that says so.

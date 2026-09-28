@@ -12,10 +12,13 @@ function Remove-{{Prefix}}Context {
     .EXAMPLE
         Remove-{{Prefix}}Context -Persisted
 
+        Removes the connection of this session and the saved connection.
+
+{{HelpLink}}
     .LINK
         Remove-OpenApiContext
     #>
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium'{{HelpUriArgument}})]
     param(
         [Parameter()]
         [switch]

@@ -25,7 +25,7 @@ Describe 'New-OpenApiGenPlan' {
 
     It 'plans the module layout' {
         $paths = @($plan.Files.RelativePath)
-        foreach ($expected in @('PetStore.psd1', 'PetStore.psm1', 'README.md', 'Overrides.ps1', 'OpenApi/operations.json', 'OpenApi/source.json',
+        foreach ($expected in @('PetStore.psd1', 'PetStore.psm1', 'README.md', 'en-US/about_PetStore.help.txt', 'Overrides.ps1', 'OpenApi/operations.json', 'OpenApi/source.json',
                 'Public/Pets/Get-PetStorePet.ps1', 'Public/Pets/New-PetStorePet.ps1', 'Public/Store/Get-PetStoreInventory.ps1', 'Public/Default/Get-PetStoreHealth.ps1',
                 'Public/_Connection/Set-PetStoreContext.ps1', 'Public/_Connection/Get-PetStoreContext.ps1', 'Public/_Connection/Remove-PetStoreContext.ps1')) {
             $paths | Should -Contain $expected
