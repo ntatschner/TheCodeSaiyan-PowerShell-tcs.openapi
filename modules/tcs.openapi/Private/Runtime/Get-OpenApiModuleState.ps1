@@ -16,7 +16,8 @@ function Get-OpenApiModuleState {
     $variable = $ExecutionContext.SessionState.PSVariable.Get($Name)
     if ($null -eq $variable -or $variable.Value -isnot [hashtable]) {
         $state = @{}
-        Set-Variable -Name $Name -Scope Script -Value $state
+        # -WhatIf:$false: Set-Variable honours -WhatIf, and under $WhatIfPreference the state would not be kept
+        Set-Variable -Name $Name -Scope Script -Value $state -Confirm:$false -WhatIf:$false
         return $state
     }
     return $variable.Value

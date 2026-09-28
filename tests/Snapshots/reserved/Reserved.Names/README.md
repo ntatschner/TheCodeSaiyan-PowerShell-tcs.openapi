@@ -11,9 +11,9 @@ Set-ReservedNamesContext -BaseUri 'https://api.example.com'
 Get-Command -Module Reserved.Names
 ```
 
-Every command has help (`Get-Help <command> -Full`). Commands pass `-Verbose`, `-Debug`,
-`-ErrorAction` and `-WhatIf` through to the request engine (`Invoke-OpenApiRequest` in tcs.openapi).
-Commands that can change data have `-WhatIf` and `-Confirm`; `Get-` and `Test-` commands do not.
+Every command has help (`Get-Help <command> -Full`). Commands pass `-Verbose`, `-Debug` and
+`-ErrorAction` through to the request engine (`Invoke-OpenApiRequest` in tcs.openapi). Commands that
+can change data also have `-WhatIf` and `-Confirm`; `Get-` and `Test-` commands do not.
 
 ## Changing the module
 

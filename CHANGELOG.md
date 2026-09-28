@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- Under `$WhatIfPreference = $true`, `Invoke-OpenApiRequest` dropped the caller's `-Verbose`, `-Debug`
+  and `-WarningAction` and printed a "What if: Set variable" line for each, and the engine kept no
+  module state between calls (contexts, HTTP clients, OAuth tokens). `Set-Variable` honours `-WhatIf`,
+  so the engine now calls it with `-WhatIf:$false`. A read such as a generated `Get-` command runs
+  as it would without `$WhatIfPreference`, and commands with `-WhatIf` still stop before the request.
+
+### Changed
+
+- The generated README no longer says that commands pass `-WhatIf` through to the engine; it says
+  that the commands that can change data have `-WhatIf` and `-Confirm`.
+
 ## [0.2.2] - 2026-09-28
 
 ### Fixed

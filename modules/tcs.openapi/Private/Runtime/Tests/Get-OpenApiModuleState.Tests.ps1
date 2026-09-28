@@ -22,6 +22,17 @@ Describe 'Get-OpenApiModuleState' {
         }
     }
 
+    It 'keeps the hashtable it creates under $WhatIfPreference' {
+        InModuleScope -ModuleName tcs.openapi {
+            Remove-Variable -Name 'TcsOpenApiDeprecationWarned' -Scope Script -ErrorAction SilentlyContinue
+            $WhatIfPreference = $true
+            $state = Get-OpenApiModuleState -Name 'TcsOpenApiDeprecationWarned'
+            $state['x'] = 1
+            (Get-OpenApiModuleState -Name 'TcsOpenApiDeprecationWarned')['x'] | Should -Be 1
+            $state.Remove('x')
+        }
+    }
+
     It 'writes no error when the variable does not exist yet' {
         InModuleScope -ModuleName tcs.openapi {
             Remove-Variable -Name 'TcsOpenApiDeprecationWarned' -Scope Script -ErrorAction SilentlyContinue

@@ -164,7 +164,9 @@ function Invoke-OpenApiRequest {
     $bodyGiven = $PSBoundParameters.ContainsKey('Body')
     Import-OpenApiHttpAssembly
 
-    # Preferences of the calling command do not cross module boundaries; take them from -Cmdlet
+    # Preferences of the calling command do not cross module boundaries; take them from -Cmdlet.
+    # Set-Variable honours -WhatIf, so it is called with -WhatIf:$false: a read has no -WhatIf of its own and
+    # must still run, with the caller's preferences, under a session-wide $WhatIfPreference
     if ($null -ne $Cmdlet) {
         $callerPreference = Get-OpenApiCallerPreference -Cmdlet $Cmdlet
         foreach ($preference in @($callerPreference.Keys)) {
@@ -175,7 +177,7 @@ function Invoke-OpenApiRequest {
                     # See below: Ignore is not a valid preference variable value on Windows PowerShell 5.1
                     $value = [System.Management.Automation.ActionPreference]::SilentlyContinue
                 }
-                Set-Variable -Name $preference -Value $value
+                Set-Variable -Name $preference -Value $value -Confirm:$false -WhatIf:$false
             }
         }
     }
@@ -187,7 +189,7 @@ function Invoke-OpenApiRequest {
     # Ignore (as -WarningAction Ignore does); the engine writes its own messages with SilentlyContinue instead
     foreach ($preference in @('VerbosePreference', 'DebugPreference', 'WarningPreference', 'InformationPreference')) {
         if ([string](Get-Variable -Name $preference -ValueOnly) -eq 'Ignore') {
-            Set-Variable -Name $preference -Value ([System.Management.Automation.ActionPreference]::SilentlyContinue)
+            Set-Variable -Name $preference -Value ([System.Management.Automation.ActionPreference]::SilentlyContinue) -Confirm:$false -WhatIf:$false
         }
     }
 
