@@ -78,6 +78,7 @@ Get-UniFiConnector -Id $id -Path 'proxy/network/integration/v1/sites'
   Public/_Connection/              Set-, Get- and Remove-<Prefix>Context
   Overrides.ps1                    yours: created once, never overwritten
   README.md                        the command list
+  en-US/about_<ModuleName>.help.txt   the about topic: what the API is, connecting, the commands
 ```
 
 The same document and options always give byte-identical files. Existing generated files are replaced only with
@@ -101,6 +102,33 @@ A generated command gets `-WhatIf` and `-Confirm` when it can change data:
 GET, HEAD and OPTIONS commands with any other verb have neither. A read therefore still runs under
 `$WhatIfPreference = $true`, and PSScriptAnalyzer's `PSUseShouldProcessForStateChangingFunctions` rule is met. Use
 `x-ps-verb` or `x-ps-name` in the document to change the verb of an operation.
+
+### Help and documentation sites
+
+The comment-based help of every generated command is written so that `Get-Help` shows plain text and
+[PlatyPS](https://github.com/PowerShell/platyPS) can turn it into Markdown that MDX-based sites (Docusaurus,
+Astro Starlight) and plain Markdown sites (MkDocs, Hugo, Jekyll) accept as it is:
+
+- HTML and Markdown from the document become plain text: `<br/>` a line break, `<p>`, headings and lists
+  paragraphs and `- ` items, links `text (url)`; `**bold**`, `*emphasis*` and heading markers are removed.
+  Inline code and fenced code blocks are kept.
+- Words that hold `<`, `{` or `}` (a path such as `/v1/hosts/{id}`, a type such as `List<string>`) and the
+  operation id and request in the description and NOTES are code spans, because MDX reads `<` as JSX and `{` as
+  an expression. A line that starts with `import` or `export` gets a capital letter.
+- Every example has a description, and pageable commands have a second example with `-All`.
+- The developer note ("Do not edit: put changes in Overrides.ps1") is a code comment, not part of the help.
+- `-HelpUri 'https://docs.example.com/unifi/{0}'` gives every command its page as `HelpUri` and first `.LINK`
+  (`{0}` is the command name), so `Get-Help <command> -Online` opens it and PlatyPS writes it as
+  `online version`. The operation's own `externalDocs` link follows it.
+- `en-US/about_<ModuleName>.help.txt` describes the API, how to connect and every command.
+- The manifest's `ProjectUri` is the document's `externalDocs` URL (otherwise `info.contact.url`) and its
+  `LicenseUri` is `info.license.url`, when they are http(s) URLs.
+
+```powershell
+New-OpenApiModule -Path ./sitemanager.json -ModuleName UniFi.SiteManager -NounPrefix UniFi -OutputPath ./out -HelpUri 'https://docs.example.com/unifi/{0}'
+Import-Module ./out/UniFi.SiteManager
+New-MarkdownHelp -Module UniFi.SiteManager -OutputFolder ./docs/unifi   # PlatyPS
+```
 
 ### Overrides.ps1
 

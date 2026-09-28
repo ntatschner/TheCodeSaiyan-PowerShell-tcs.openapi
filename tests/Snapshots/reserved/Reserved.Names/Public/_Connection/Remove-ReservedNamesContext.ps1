@@ -12,6 +12,8 @@ function Remove-ReservedNamesContext {
     .EXAMPLE
         Remove-ReservedNamesContext -Persisted
 
+        Removes the connection of this session and the saved connection.
+
     .LINK
         Remove-OpenApiContext
     #>

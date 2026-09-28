@@ -9,6 +9,8 @@ function Get-ReservedNamesContext {
     .EXAMPLE
         Get-ReservedNamesContext
 
+        Shows the connection of this session, with secrets hidden.
+
     .LINK
         Get-OpenApiContext
     #>

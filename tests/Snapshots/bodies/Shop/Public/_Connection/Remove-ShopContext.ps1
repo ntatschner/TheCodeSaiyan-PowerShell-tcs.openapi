@@ -12,6 +12,8 @@ function Remove-ShopContext {
     .EXAMPLE
         Remove-ShopContext -Persisted
 
+        Removes the connection of this session and the saved connection.
+
     .LINK
         Remove-OpenApiContext
     #>
