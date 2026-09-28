@@ -9,6 +9,8 @@ function Get-ShopContext {
     .EXAMPLE
         Get-ShopContext
 
+        Shows the connection of this session, with secrets hidden.
+
     .LINK
         Get-OpenApiContext
     #>

@@ -19,6 +19,7 @@
     PrivateData          = @{
         PSData = @{
             Tags = @('OpenAPI', 'REST', 'API', 'tcs.openapi')
+{{PSDataUris}}
         }
     }
 }

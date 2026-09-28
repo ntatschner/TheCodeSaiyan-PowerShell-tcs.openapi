@@ -12,7 +12,8 @@ function New-OpenApiGenPlan {
         Unsupported, without an operationId or with the operationId of an earlier operation (ordinal) are
         skipped too. Every skip is an OA070 finding.
 
-        Files (RelativePath uses '/'): <Name>.psd1, <Name>.psm1, README.md, Overrides.ps1 (Kind
+        Files (RelativePath uses '/'): <Name>.psd1, <Name>.psm1, README.md, en-US/about_<Name>.help.txt,
+        Overrides.ps1 (Kind
         'Overrides': never overwritten), OpenApi/operations.json, OpenApi/source.json (compressed, without null or empty
         properties),
         Public/<Tag>/<Verb>-<Noun>.ps1 and Public/_Connection/<Verb>-<Prefix>Context.ps1. The output
@@ -96,7 +97,11 @@ function New-OpenApiGenPlan {
         $name = $resolved.Names[$i]
         $model = Get-OpenApiGenParameterModel -Operation $operation -BaseNoun $name.BaseNoun -Schemas $Document.Schemas
         $metadata = ConvertTo-OpenApiGenMetadataEntry -Operation $operation -Document $Document -Service $Option.Service -UnwrapProperty ([string]$Option.UnwrapProperty)
-        $text = ConvertTo-OpenApiGenFunction -CommandName $name -Operation $operation -ParameterModel $model -ResponseTypeName $metadata.ResponseTypeName -Template $Template['Function.ps1']
+        $helpUri = ''
+        if (-not [string]::IsNullOrWhiteSpace([string]$Option.HelpUri)) {
+            $helpUri = ([string]$Option.HelpUri).Replace('{0}', $name.Name)
+        }
+        $text = ConvertTo-OpenApiGenFunction -CommandName $name -Operation $operation -ParameterModel $model -ResponseTypeName $metadata.ResponseTypeName -Template $Template['Function.ps1'] -HelpUri $helpUri
         $check = Test-OpenApiGenFunction -Text $text -FunctionName $name.Name
         if (-not $check.IsValid) {
             & $addSkip $operation ("the generated function did not pass the parse and bind check: " + ($check.Errors -join ' ') + '.') 'Error'
@@ -133,7 +138,7 @@ function New-OpenApiGenPlan {
 
     # Connection commands
     $authExample = Get-OpenApiGenAuthExample -Document $Document
-    $connections = @(ConvertTo-OpenApiGenConnection -Prefix $Option.Prefix -Service $Option.Service -ModuleName $Option.ModuleName -Server @($Document.Servers) -AuthExample $authExample -Template $Template)
+    $connections = @(ConvertTo-OpenApiGenConnection -Prefix $Option.Prefix -Service $Option.Service -ModuleName $Option.ModuleName -Server @($Document.Servers) -AuthExample $authExample -Template $Template -HelpUri ([string]$Option.HelpUri))
     foreach ($connection in $connections) {
         $check = Test-OpenApiGenFunction -Text $connection.Text -FunctionName $connection.Name
         if (-not $check.IsValid) {
@@ -165,6 +170,8 @@ function New-OpenApiGenPlan {
     [void]$files.Add([pscustomobject]@{ RelativePath = 'Overrides.ps1'; Kind = 'Overrides'; Content = (Expand-OpenApiGenTemplate -Template $Template['Overrides.ps1'] -Value $moduleValues); FunctionName = $null; OperationId = $null })
     $readme = ConvertTo-OpenApiGenReadme -Option $Option -Document $Document -Function $functions.ToArray() -ConnectExample $connections[0].ConnectExample -Template $Template['README.md']
     [void]$files.Add([pscustomobject]@{ RelativePath = 'README.md'; Kind = 'Readme'; Content = $readme; FunctionName = $null; OperationId = $null })
+    $about = ConvertTo-OpenApiGenAbout -Option $Option -Document $Document -Function $functions.ToArray() -ConnectExample $connections[0].ConnectExample -Template $Template['About.help.txt']
+    [void]$files.Add([pscustomobject]@{ RelativePath = "en-US/about_$($Option.ModuleName).help.txt"; Kind = 'About'; Content = $about; FunctionName = $null; OperationId = $null })
     $sortedMetadata = Get-OpenApiGenOrdinalSorted -InputObject $metadataList.ToArray() -Key { [string]$_.OperationId }
     [void]$files.Add([pscustomobject]@{ RelativePath = 'OpenApi/operations.json'; Kind = 'Metadata'; Content = ((ConvertTo-OpenApiGenJson -InputObject $sortedMetadata) + "`n"); FunctionName = $null; OperationId = $null })
     [void]$files.Add([pscustomobject]@{ RelativePath = 'OpenApi/source.json'; Kind = 'Source'; Content = ((ConvertTo-OpenApiGenJson -InputObject $Document -Compress -SkipEmpty) + "`n"); FunctionName = $null; OperationId = $null })

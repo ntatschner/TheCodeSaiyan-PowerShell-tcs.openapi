@@ -20,7 +20,18 @@ Describe 'ConvertTo-OpenApiDocumentModel' {
         It 'has the documented properties in order and PSTypeName' {
             $model = & $script:load (Join-Path -Path $script:fixtures -ChildPath 'document-petstore-3.0.json')
             $model.PSObject.TypeNames | Should -Contain 'Tcs.OpenApi.Document'
-            @($model.PSObject.Properties.Name) | Should -Be @('SourceVersion', 'Title', 'Version', 'Description', 'Servers', 'SecuritySchemes', 'Security', 'Schemas', 'Operations', 'Findings')
+            @($model.PSObject.Properties.Name) | Should -Be @('SourceVersion', 'Title', 'Version', 'Description', 'ContactUrl', 'LicenseName', 'LicenseUrl', 'ExternalDocsUrl', 'Servers', 'SecuritySchemes', 'Security', 'Schemas', 'Operations', 'Findings')
+        }
+
+        It 'reads the contact, licence and externalDocs URLs' {
+            $model = & $script:fromText '{"openapi":"3.0.3","info":{"title":"T","version":"1","contact":{"url":"https://example.com/support"},"license":{"name":"MIT","url":"https://example.com/license"}},"externalDocs":{"url":"https://docs.example.com"},"paths":{}}'
+            $model.ContactUrl | Should -Be 'https://example.com/support'
+            $model.LicenseName | Should -Be 'MIT'
+            $model.LicenseUrl | Should -Be 'https://example.com/license'
+            $model.ExternalDocsUrl | Should -Be 'https://docs.example.com'
+            $model = & $script:fromText '{"openapi":"3.0.3","info":{"title":"T","version":"1"},"paths":{}}'
+            $model.ContactUrl | Should -BeNullOrEmpty
+            $model.ExternalDocsUrl | Should -BeNullOrEmpty
         }
 
         It 'round-trips through ConvertTo-Json' {

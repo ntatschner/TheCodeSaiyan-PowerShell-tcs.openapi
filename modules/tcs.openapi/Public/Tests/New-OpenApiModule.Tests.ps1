@@ -35,7 +35,7 @@ Describe 'New-OpenApiModule' {
         $pet.File | Should -Be 'Public/Pets/Get-PetStorePetById.ps1'
         $pet.Action | Should -Be 'Created'
         @($result.Skipped).Count | Should -Be 0
-        @($result.Files).Count | Should -Be 18
+        @($result.Files).Count | Should -Be 19
         Test-ModuleManifest -Path $result.ManifestPath -ErrorAction SilentlyContinue | Out-Null
         (Import-PowerShellDataFile -Path $result.ManifestPath).FunctionsToExport.Count | Should -Be 12
     }
@@ -172,6 +172,34 @@ Describe 'New-OpenApiModule' {
         $metadata[0].ResponseTypeName | Should -Be 'Wrap.Host'
         $metadata[1].PSObject.Properties.Name | Should -Not -Contain 'UnwrapProperty'
         Get-Content -LiteralPath (Join-Path -Path $result.Path -ChildPath 'Public/Default/Get-WHost.ps1') -Raw | Should -Match "OutputType\('Wrap.Host'\)"
+    }
+
+    It 'writes help that PlatyPS can pass into MDX, with -HelpUri as the online help and an about topic' {
+        $RepoRoot = Split-Path -Path (Split-Path -Path $ModuleRoot -Parent) -Parent
+        $result = New-OpenApiModule -Path (Join-Path -Path $RepoRoot -ChildPath 'tests/Fixtures/unifi-site-manager-1.0.0.json') -ModuleName 'Help.UniFi' -NounPrefix 'HelpUniFi' -OutputPath $out -HelpUri 'https://docs.example.com/unifi/{0}'
+        Test-Path -LiteralPath (Join-Path -Path $result.Path -ChildPath 'en-US/about_Help.UniFi.help.txt') | Should -BeTrue
+        Import-Module -Name $result.ManifestPath -Force
+        try {
+            (Get-Help -Name 'about_Help.UniFi' | Out-String) | Should -Match 'about_Help\.UniFi'
+            foreach ($command in @(Get-Command -Module 'Help.UniFi')) {
+                $command.HelpUri | Should -Be "https://docs.example.com/unifi/$($command.Name)"
+                $help = Get-Help -Name $command.Name -Full
+                @($help.relatedLinks.navigationLink)[0].uri | Should -Be "https://docs.example.com/unifi/$($command.Name)"
+                $texts = @($help.Synopsis) + @($help.description | ForEach-Object -Process { $_.Text }) +
+                @($help.parameters.parameter | ForEach-Object -Process { $_.description | ForEach-Object -Process { $_.Text } }) +
+                @($help.examples.example | ForEach-Object -Process { $_.remarks | ForEach-Object -Process { $_.Text } }) +
+                @($help.alertSet.alert | ForEach-Object -Process { $_.Text })
+                $prose = [regex]::Replace(($texts -join "`n"), '`[^`\n]*`', '')
+                $prose | Should -Not -Match '[<{}]' -Because "$($command.Name) help must not hold JSX or expressions for MDX"
+                $prose | Should -Not -Match 'Do not edit' -Because $command.Name
+                foreach ($example in @($help.examples.example)) {
+                    (@($example.remarks | ForEach-Object -Process { $_.Text }) -join '').Trim() | Should -Not -BeNullOrEmpty -Because "every example of $($command.Name) has a description"
+                }
+            }
+        }
+        finally {
+            Remove-Module -Name 'Help.UniFi' -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It 'rejects an invalid module name or noun prefix' {

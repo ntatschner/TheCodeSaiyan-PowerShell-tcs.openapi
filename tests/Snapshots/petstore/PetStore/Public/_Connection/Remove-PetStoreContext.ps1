@@ -12,6 +12,8 @@ function Remove-PetStoreContext {
     .EXAMPLE
         Remove-PetStoreContext -Persisted
 
+        Removes the connection of this session and the saved connection.
+
     .LINK
         Remove-OpenApiContext
     #>

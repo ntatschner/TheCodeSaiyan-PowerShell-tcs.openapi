@@ -51,6 +51,8 @@ Always OpenAPI 3-shaped, whatever the input version. `PSTypeName = 'Tcs.OpenApi.
 {
   SourceVersion : the version string of the document as written ('2.0', '3.0.3', '3.1.0', ...)
   Title, Version, Description
+  ContactUrl, LicenseName, LicenseUrl : info.contact.url, info.license.name and info.license.url
+  ExternalDocsUrl : externalDocs.url of the document
   Servers       : [ { Url, Description, Variables: { name: { Default, Enum } } } ]   # Swagger 2: from schemes/host/basePath
   SecuritySchemes: { name: SecurityScheme }
   Security      : [ { schemeName: [scopes] } ]                                      # document default
@@ -170,6 +172,7 @@ through `Get-OpenApiMember`, so it accepts these objects as well as hand-built h
                            <Prefix> = NounPrefix, else the PascalCase module name; -BaseUri of Set- defaults to the first absolute
                            http(s) server URL (server variables replaced by their defaults), else it is mandatory
   Overrides.ps1            created once, never overwritten; functions defined here replace generated ones of the same name
+  en-US/about_<Name>.help.txt  about topic: the API, connecting, the commands, SEE ALSO links
   README.md                generated command list; its "Getting started" shows Set-<Prefix>Context with the credential
                            parameters of the document's security (first document requirement, else the first operation
                            requirement, else the first scheme: apiKey -ApiKey, http basic -Credential, http bearer and
@@ -206,7 +209,7 @@ UTF-8 with a BOM only when a file is not ASCII). Operations without an operation
 - `SupportsShouldProcess` for every method except GET/HEAD/OPTIONS; `ConfirmImpact = 'High'` for DELETE, `'Medium'` otherwise.
 
 ### Wrapper shape (rendered from `Templates/Function.ps1.template`)
-Comment-based help (summary -> SYNOPSIS, description -> DESCRIPTION, parameter descriptions, one runnable EXAMPLE built from required parameters, `.LINK` to externalDocs, deprecation note), `[CmdletBinding(...)]`, `[OutputType('<Service>.<Schema>')]` when known, `param()`, `process {}` that: builds the four parameter hashtables and the body from `$PSBoundParameters` using a small generated name map, calls `ShouldProcess` when needed, then `Invoke-OpenApiRequest -Service $script:TcsOpenApiService -Operation $script:TcsOpenApiOperations['<id>'] ... -Cmdlet $PSCmdlet`. Generated code must parse, and every function must bind (`Get-Command -Syntax`) - the generator checks both before writing.
+Comment-based help (summary -> SYNOPSIS, description -> DESCRIPTION, parameter descriptions, one runnable EXAMPLE built from required parameters with a description, a second with `-All` for pageable operations, `.LINK` to `-HelpUri` then externalDocs, deprecation note), all document text through `ConvertTo-OpenApiGenHelpText` (HTML and Markdown to plain text; words with `<`, `{` or `}` and operation ids and paths as code spans, so PlatyPS output is valid MDX), `[CmdletBinding(...)]`, `[OutputType('<Service>.<Schema>')]` when known, `param()`, `process {}` that: builds the four parameter hashtables and the body from `$PSBoundParameters` using a small generated name map, calls `ShouldProcess` when needed, then `Invoke-OpenApiRequest -Service $script:TcsOpenApiService -Operation $script:TcsOpenApiOperations['<id>'] ... -Cmdlet $PSCmdlet`. Generated code must parse, and every function must bind (`Get-Command -Syntax`) - the generator checks both before writing.
 
 ## Findings codes (non-exhaustive)
 `OA001` invalid/unsupported document version, `OA002` missing paths, `OA010` missing operationId (generated), `OA011` duplicate operationId, `OA020` external $ref, `OA021` unresolved $ref, `OA022` circular schema (information), `OA023` path parameter not in the path template (warning; ignored), `OA024` path template placeholder without a path parameter (error), `OA030` unsupported security scheme type (openIdConnect, oauth2 flows other than clientCredentials), `OA031` multiple non-null types (3.1), `OA040` renamed command (collision), `OA041` renamed parameter (reserved/duplicate), `OA042` renamed command (would shadow a core PowerShell command), `OA050` oneOf/anyOf body (passed through as -Body only), `OA051` unsupported media type (sent as raw string/bytes), `OA060` deprecated operation, `OA070` operation skipped.

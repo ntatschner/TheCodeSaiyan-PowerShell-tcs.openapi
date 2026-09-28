@@ -9,6 +9,8 @@ function Get-PetStoreContext {
     .EXAMPLE
         Get-PetStoreContext
 
+        Shows the connection of this session, with secrets hidden.
+
     .LINK
         Get-OpenApiContext
     #>

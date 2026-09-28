@@ -59,6 +59,8 @@ function Set-ReservedNamesContext {
     .EXAMPLE
         Set-ReservedNamesContext -BaseUri 'https://api.example.com'
 
+        Sets the connection for this session; add -Persist to save it for later sessions.
+
     .LINK
         Set-OpenApiContext
     #>

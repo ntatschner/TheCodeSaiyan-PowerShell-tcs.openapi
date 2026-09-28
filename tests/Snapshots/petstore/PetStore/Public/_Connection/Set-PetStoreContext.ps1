@@ -59,6 +59,8 @@ function Set-PetStoreContext {
     .EXAMPLE
         Set-PetStoreContext -BearerToken (Read-Host -AsSecureString -Prompt 'Token')
 
+        Sets the connection for this session; add -Persist to save it for later sessions.
+
     .LINK
         Set-OpenApiContext
     #>
