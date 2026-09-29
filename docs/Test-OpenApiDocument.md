@@ -14,22 +14,22 @@ Checks an OpenAPI or Swagger document and returns its findings.
 
 ### Path (Default)
 ```
-Test-OpenApiDocument -Path <String> [-Summary] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Test-OpenApiDocument -Path <String> [-Summary] [<CommonParameters>]
 ```
 
 ### Uri
 ```
-Test-OpenApiDocument -Uri <Uri> [-Summary] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Test-OpenApiDocument -Uri <Uri> [-Summary] [<CommonParameters>]
 ```
 
 ### InputObject
 ```
-Test-OpenApiDocument -InputObject <String> [-Summary] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Test-OpenApiDocument -InputObject <String> [-Summary] [<CommonParameters>]
 ```
 
 ### Document
 ```
-Test-OpenApiDocument -Document <PSObject> [-Summary] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Test-OpenApiDocument -Document <PSObject> [-Summary] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -164,21 +164,6 @@ Aliases:
 Required: False
 Position: Named
 Default value: False
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: ActionPreference
-Parameter Sets: (All)
-Aliases: proga
-
-Required: False
-Position: Named
-Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

@@ -17,7 +17,7 @@ Set-OpenApiContext [-Service] <String> [-BaseUri] <Uri> [[-ApiKey] <SecureString
  [[-Credential] <PSCredential>] [[-BearerToken] <SecureString>] [[-ClientId] <String>]
  [[-ClientSecret] <SecureString>] [[-TokenUri] <Uri>] [[-Scope] <String[]>] [[-Header] <Hashtable>]
  [[-TimeoutSec] <Int32>] [[-Proxy] <Uri>] [[-ProxyCredential] <PSCredential>] [-SkipCertificateCheck]
- [[-MaxRetries] <Int32>] [-Persist] [-PassThru] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm]
+ [[-MaxRetries] <Int32>] [-Persist] [-PassThru] [-WhatIf] [-Confirm]
  [<CommonParameters>]
 ```
 
@@ -344,21 +344,6 @@ Prompts you for confirmation before running the cmdlet.
 Type: SwitchParameter
 Parameter Sets: (All)
 Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: ActionPreference
-Parameter Sets: (All)
-Aliases: proga
 
 Required: False
 Position: Named

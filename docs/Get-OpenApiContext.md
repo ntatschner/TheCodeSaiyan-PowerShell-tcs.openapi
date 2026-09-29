@@ -13,7 +13,7 @@ Returns the stored connections of OpenAPI services, with every secret shown as *
 ## SYNTAX
 
 ```
-Get-OpenApiContext [[-Service] <String>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Get-OpenApiContext [[-Service] <String>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -56,21 +56,6 @@ Position: 1
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: True
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: ActionPreference
-Parameter Sets: (All)
-Aliases: proga
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
 ```
 
 ### CommonParameters

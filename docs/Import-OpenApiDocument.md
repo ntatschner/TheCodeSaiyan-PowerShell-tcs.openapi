@@ -14,17 +14,17 @@ Reads an OpenAPI 3.0/3.1 or Swagger 2.0 document and returns the normalised docu
 
 ### Path (Default)
 ```
-Import-OpenApiDocument -Path <String> [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Import-OpenApiDocument -Path <String> [<CommonParameters>]
 ```
 
 ### Uri
 ```
-Import-OpenApiDocument -Uri <Uri> [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Import-OpenApiDocument -Uri <Uri> [<CommonParameters>]
 ```
 
 ### InputObject
 ```
-Import-OpenApiDocument -InputObject <String> [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Import-OpenApiDocument -InputObject <String> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -113,21 +113,6 @@ Parameter Sets: InputObject
 Aliases:
 
 Required: True
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: ActionPreference
-Parameter Sets: (All)
-Aliases: proga
-
-Required: False
 Position: Named
 Default value: None
 Accept pipeline input: False

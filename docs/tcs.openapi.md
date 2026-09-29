@@ -1,14 +1,14 @@
 ---
 Module Name: tcs.openapi
-Module Guid: {{ Update Module Guid }}
-Download Help Link: {{ Update Download Link }}
-Help Version: {{ Update Help Version }}
-Locale: {{ Update Locale }}
+Module Guid: fea600e7-039d-4cf2-b288-bbf335757db6
+Download Help Link: 
+Help Version: 0.3.1
+Locale: en-GB
 ---
 
 # tcs.openapi Module
 ## Description
-{{ Fill in the Description }}
+Generate PowerShell modules from OpenAPI 3.0/3.1 and Swagger 2.0 documents, plus the shared request engine the generated modules use (auth, parameter serialisation, request bodies, retry, paging, errors and downloads).
 
 ## tcs.openapi Cmdlets
 ### [Get-OpenApiContext](Get-OpenApiContext.md)

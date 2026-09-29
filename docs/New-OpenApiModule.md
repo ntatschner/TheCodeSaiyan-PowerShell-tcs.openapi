@@ -16,21 +16,21 @@ Generates a PowerShell module of wrapper commands from an OpenAPI 3.0/3.1 or Swa
 ```
 New-OpenApiModule -Document <PSObject> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
  [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
- [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ### Path
 ```
 New-OpenApiModule -Path <String> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
  [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
- [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ### Uri
 ```
 New-OpenApiModule -Uri <Uri> -ModuleName <String> -OutputPath <String> [-NounPrefix <String>]
  [-UnwrapProperty <String>] [-HelpUri <String>] [-ModuleVersion <Version>] [-Author <String>] [-Force]
- [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -339,21 +339,6 @@ Asks for confirmation before each file is written.
 Type: SwitchParameter
 Parameter Sets: (All)
 Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProgressAction
-{{ Fill ProgressAction Description }}
-
-```yaml
-Type: ActionPreference
-Parameter Sets: (All)
-Aliases: proga
 
 Required: False
 Position: Named
